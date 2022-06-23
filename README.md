@@ -14,14 +14,30 @@ luarocks install gpoll
 
 ***
 
-# Polling API's
-
-this module provides only a generic API for synchronous I/O multiplexing processing. therefore, you must be set the poller for the actual processing.
+this module provides only a generic API interfaces for synchronous I/O multiplexing processing. therefore, you must be set the poller for the actual processing.
 
 
 ## set_poller( [poller] )
 
-set the `poller` to the polling driver. the `poller` object must have the Polling API Interface except `set_poller` function. if `poller` is `nil`, the default poller will be set.
+set the `poller` to the polling driver. the `poller` object must have the Polling API Interfaces described below, except `set_poller` function. if `poller` is `nil`, the default poller will be set.
+
+```lua
+local gpoll = require('gpoll')
+gpoll.set_poller({
+    -- wait_readable = ...,
+    -- wait_writable = ...,
+    -- unwait = ...,
+    -- unwait_readable = ...,
+    -- unwait_writable = ...,
+    -- read_lock = ...,
+    -- write_lock = ...,
+    -- read_unlock = ...,
+    -- write_unlock = ...,
+})
+```
+
+
+# Polling API Interfaces
 
 
 ## ok = pollable()
@@ -33,14 +49,14 @@ determine the availability of the polling mechanism.
 - `ok:boolean`: `true` on the polling mechanism is available.
 
 
-## ok, err, timeout = wait_readable( fd [, timeout [, hook [, ctx]]] )
+## ok, err, timeout = wait_readable( fd [, duration [, hook [, ctx]]] )
 
 wait until the file descriptor is readable.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `timeout:integer`: specify a timeout `milliseconds` as unsigned integer.
+- `duration:integer`: specify a duration `milliseconds` as unsigned integer.
 - `hook:function`: a hook function that calls before polling a status of file descriptor.
 - `ctx:any: any value for hook function.
 
@@ -51,14 +67,14 @@ wait until the file descriptor is readable.
 - `timeout:boolean`: `true` if operation has timed out.
 
 
-## ok, err, timeout = wait_writable( fd [, timeout [, hook [, ctx]]] )
+## ok, err, timeout = wait_writable( fd [, duration [, hook [, ctx]]] )
 
 wait until the file descriptor is writable.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `timeout:integer`: specify a timeout `milliseconds` as unsigned integer.
+- `duration:integer`: specify a duration `milliseconds` as unsigned integer.
 - `hook:function`: a hook function that calls before polling a status of file descriptor.
 - `ctx:any: any value for hook function.
 
@@ -111,14 +127,14 @@ cancels waiting for file descriptor to be readable/writable.
 - `err:error`: error object. (default: `errno.ENOTSUP`)
 
 
-## ok, err, timeout = read_lock( fd [, timeout] )
+## ok, err, timeout = read_lock( fd [, duration] )
 
 waits until a read lock is acquired.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `timeout:integer`: a timeout `milliseconds` as unsigned integer.
+- `duration:integer`: a duration `milliseconds` as unsigned integer.
 
 **Returns**
 
@@ -141,14 +157,14 @@ releases a read lock.
 - `err:error`: error object. (default: `errno.ENOTSUP`)
 
 
-## ok, err, timeout = write_lock( fd [, timeout] )
+## ok, err, timeout = write_lock( fd [, duration] )
 
 waits until a write lock is acquired.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `timeout:integer`: a timeout `milliseconds` as unsigned integer.
+- `duration:integer`: a duration `milliseconds` as unsigned integer.
 
 **Returns**
 
