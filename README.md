@@ -24,14 +24,15 @@ set the `poller` to the polling driver. the `poller` object must have the Pollin
 ```lua
 local gpoll = require('gpoll')
 gpoll.set_poller({
+    -- pollable = ...,
     -- wait_readable = ...,
-    -- wait_writable = ...,
-    -- unwait = ...,
     -- unwait_readable = ...,
+    -- wait_writable = ...,
     -- unwait_writable = ...,
+    -- unwait = ...,
     -- read_lock = ...,
-    -- write_lock = ...,
     -- read_unlock = ...,
+    -- write_lock = ...,
     -- write_unlock = ...,
 })
 ```
