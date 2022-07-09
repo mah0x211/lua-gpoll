@@ -12,6 +12,7 @@ description = {
 dependencies = {
     "lua >= 5.1",
     "errno >= 0.3.0",
+    "io-wait >= 0.1.0",
 }
 build = {
     type = "builtin",

@@ -3,13 +3,12 @@ local assert = require('assert')
 local errno = require('errno')
 local gpoll = require('gpoll')
 local default_pollable = gpoll.pollable
+local fileno = require('io.fileno')
 
 do
     -- test that default returns
     assert.is_false(gpoll.pollable())
     for _, fn in ipairs({
-        gpoll.wait_readable,
-        gpoll.wait_writable,
         gpoll.unwait,
         gpoll.unwait_readable,
         gpoll.unwait_writable,
@@ -23,6 +22,19 @@ do
         assert.equal(err.type, errno.ENOTSUP)
         assert.is_nil(timeout)
     end
+
+    local f = assert(io.tmpfile())
+    local fd = fileno(f)
+    for _, fn in ipairs({
+        gpoll.wait_readable,
+        gpoll.wait_writable,
+    }) do
+        local ok, err, timeout = fn(fd)
+        assert.is_true(ok)
+        assert.is_nil(err)
+        assert.is_nil(timeout)
+    end
+    f:close()
 end
 
 do
