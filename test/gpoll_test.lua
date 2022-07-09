@@ -164,7 +164,7 @@ do
 end
 
 do
-    -- test that poller return timeout
+    -- test that poller return error
     gpoll.set_poller({
         pollable = function()
             return true
@@ -257,6 +257,54 @@ do
 end
 
 do
+    -- test that poller return timeout without error
+    gpoll.set_poller({
+        pollable = function()
+            return true
+        end,
+        wait_readable = function()
+            return false, nil, true
+        end,
+        wait_writable = function()
+            return false, nil, true
+        end,
+        unwait = function()
+            return false, errno.ETIMEDOUT:new('unwait')
+        end,
+        unwait_readable = function()
+            return false, errno.ETIMEDOUT:new('unwait_readable')
+        end,
+        unwait_writable = function()
+            return false, errno.ETIMEDOUT:new('unwait_writable')
+        end,
+        read_lock = function()
+            return false, nil, true
+        end,
+        write_lock = function()
+            return false, nil, true
+        end,
+        read_unlock = function()
+            return false, errno.ETIMEDOUT:new('read_unlock')
+        end,
+        write_unlock = function()
+            return false, errno.ETIMEDOUT:new('write_unlock')
+        end,
+    })
+    assert.is_true(gpoll.pollable())
+    for _, fn in ipairs({
+        'wait_readable',
+        'wait_writable',
+        'read_lock',
+        'write_lock',
+    }) do
+        local ok, err, timeout = gpoll[fn](1)
+        assert.is_false(ok)
+        assert.is_nil(err)
+        assert.is_true(timeout)
+    end
+end
+
+do
     -- test that poller.wait_* functions calls hook function
     gpoll.set_poller({
         pollable = function()
@@ -303,7 +351,20 @@ do
         assert.match(err, 'hook failure')
     end
 
-    -- test that throws an error if hook function return false without error
+    -- test that return values from hook function
+    for _, v in ipairs({
+        'wait_readable',
+        'wait_writable',
+    }) do
+        local ok, err, timeout = gpoll[v](1, 123, function()
+            return false, nil, true
+        end, 'context')
+        assert.is_false(ok)
+        assert.is_nil(err)
+        assert.is_true(timeout)
+    end
+
+    -- test that throws an error if hook function return false with neither error nor timeout
     for _, v in ipairs({
         'wait_readable',
         'wait_writable',
@@ -311,7 +372,8 @@ do
         local err = assert.throws(gpoll[v], 1, 123, function()
             return false
         end)
-        assert.match(err, 'hookfn returned false|nil without an error')
+        assert.match(err,
+                     'hookfn returned false|nil with neither error nor timeout')
     end
 end
 
@@ -350,18 +412,25 @@ do
         end,
     })
     for _, v in ipairs({
-        'wait_readable',
-        'wait_writable',
         'unwait',
         'unwait_readable',
         'unwait_writable',
-        'read_lock',
-        'write_lock',
         'read_unlock',
         'write_unlock',
     }) do
         local err = assert.throws(gpoll[v], 1)
         assert.match(err, v .. ' returned false|nil without an error')
+    end
+
+    for _, v in ipairs({
+        'read_lock',
+        'write_lock',
+        'wait_readable',
+        'wait_writable',
+    }) do
+        local err = assert.throws(gpoll[v], 1)
+        assert.match(err,
+                     v .. ' returned false|nil with neither error nor timeout')
     end
 end
 

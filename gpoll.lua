@@ -196,7 +196,7 @@ end
 --- @param ctx? any
 --- @return boolean ok
 --- @return error? err
---- @return boolean? duration
+--- @return boolean? timeout
 local function do_wait(fname, fd, duration, hookfn, ctx)
     if not is_uint(fd) then
         error('fd must be uint', 2)
@@ -212,27 +212,31 @@ local function do_wait(fname, fd, duration, hookfn, ctx)
 
         local ok, err, timeout = hookfn(ctx, duration)
         if not ok then
-            if err == nil then
-                error('hookfn returned false|nil without an error')
+            if err then
+                return false, toerror(err), timeout
+            elseif timeout then
+                return false, nil, true
             end
-            return false, toerror(err), timeout
+            error('hookfn returned false|nil with neither error nor timeout')
         end
     end
 
     local ok, err, timeout = WAITFN[fname](fd, duration)
     if ok then
         return true
-    elseif err == nil then
-        error(fname .. ' returned false|nil without an error')
+    elseif err then
+        return false, toerror(err), timeout
+    elseif timeout then
+        return false, nil, true
     end
-    return false, toerror(err), timeout
+    error(fname .. ' returned false|nil with neither error nor timeout')
 end
 
 --- do_unwait
 --- @param fname string
 --- @param fd integer
 --- @return boolean ok
---- @return error err
+--- @return error? err
 local function do_unwait(fname, fd)
     if not is_uint(fd) then
         error('fd must be uint', 2)
@@ -241,10 +245,10 @@ local function do_unwait(fname, fd)
     local ok, err = UNWAITFN[fname](fd)
     if ok then
         return true
-    elseif err == nil then
-        error(fname .. ' returned false|nil without an error')
+    elseif err then
+        return false, toerror(err)
     end
-    return false, toerror(err)
+    error(fname .. ' returned false|nil without an error')
 end
 
 --- do_lock waits until a lock is acquired
@@ -264,10 +268,12 @@ local function do_lock(fname, fd, duration)
     local ok, err, timeout = LOCKFN[fname](fd, duration)
     if ok then
         return true
-    elseif err == nil then
-        error(fname .. ' returned false|nil without an error')
+    elseif err then
+        return false, toerror(err), timeout
+    elseif timeout then
+        return false, nil, true
     end
-    return false, toerror(err), timeout
+    error(fname .. ' returned false|nil with neither error nor timeout')
 end
 
 --- do_unlock releases a lock
