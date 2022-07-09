@@ -55,6 +55,7 @@ jobs:
       run: |
         luarocks install luacov
         luarocks install assert
+        luarocks install io-fileno
     -
       name: Install
       run: |
