@@ -187,3 +187,17 @@ releases a write lock.
 - `ok:boolean`: `true` on success. (default: `false`)
 - `err:error`: error object. (default: `errno.ENOTSUP`)
 
+
+## rem, err = sleep( duration )
+
+waits until `duration` seconds have elapsed.
+
+**Parameters**
+
+- `duration:integer`: specify a wait `milliseconds` as unsigned integer.
+
+**Returns**
+
+- `rem:integer`: remaining milliseconds, or `nil` if an error occurs.
+- `err:error`: error object. (default: `errno.ENOTSUP`)
+

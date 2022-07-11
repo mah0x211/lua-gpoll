@@ -24,6 +24,7 @@ local new_errno = require('errno').new
 local io_wait = require('io.wait')
 local io_wait_readable = io_wait.readable
 local io_wait_writable = io_wait.writable
+local msleep = require('nanosleep.msleep')
 local isa = require('isa')
 local is_uint = isa.uint
 local is_function = isa.Function
@@ -111,6 +112,14 @@ function DEFAULT_POLLER.write_unlock(fd)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
+--- sleep
+--- @param msec integer
+--- @return rem integer
+--- @return error? err
+function DEFAULT_POLLER.sleep(msec)
+    return msleep(msec)
+end
+
 --- poll_pollable
 --- @return boolean ok
 function DEFAULT_POLLER.pollable()
@@ -135,6 +144,7 @@ local UNLOCKFN = {
     read_unlock = DEFAULT_POLLER.read_unlock,
     write_unlock = DEFAULT_POLLER.write_unlock,
 }
+local SLEEPFN = DEFAULT_POLLER.sleep
 
 -- assign to local
 local type = type
@@ -157,6 +167,7 @@ local function set_poller(poller)
             'read_unlock',
             'write_lock',
             'write_unlock',
+            'sleep',
         }) do
             local f = poller[k]
             if type(f) ~= 'function' then
@@ -184,6 +195,7 @@ local function set_poller(poller)
         read_unlock = poller.read_unlock,
         write_unlock = poller.write_unlock,
     }
+    SLEEPFN = poller.sleep
 end
 
 --- pollable
@@ -377,6 +389,27 @@ local function write_unlock(fd)
     return do_unlock('write_unlock', fd)
 end
 
+--- sleep until timer time elapsed
+--- @param msec number
+--- @return rem number
+--- @return error? err
+local function sleep(msec)
+    if not is_uint(msec) then
+        error('msec must be uint', 2)
+    end
+
+    local rem, err = SLEEPFN(msec)
+    if rem then
+        if not is_uint(rem) then
+            error('sleep returned non-uint value')
+        end
+        return rem
+    elseif err then
+        return nil, toerror(err)
+    end
+    error('sleep returned nil without an error')
+end
+
 return {
     set_poller = set_poller,
     pollable = pollable,
@@ -389,4 +422,5 @@ return {
     write_lock = write_lock,
     read_unlock = read_unlock,
     write_unlock = write_unlock,
+    sleep = sleep,
 }
