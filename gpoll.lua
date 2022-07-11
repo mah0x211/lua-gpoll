@@ -113,10 +113,11 @@ end
 
 --- poll_pollable
 --- @return boolean ok
-local function poll_pollable()
+function DEFAULT_POLLER.pollable()
     return false
 end
 
+local POLLABLEFN = DEFAULT_POLLER.pollable
 local WAITFN = {
     wait_readable = DEFAULT_POLLER.wait_readable,
     wait_writable = DEFAULT_POLLER.wait_writable,
@@ -165,7 +166,7 @@ local function set_poller(poller)
     end
 
     --- replace poll functions
-    poll_pollable = poller.pollable
+    POLLABLEFN = poller.pollable
     WAITFN = {
         wait_readable = poller.wait_readable,
         wait_writable = poller.wait_writable,
@@ -188,7 +189,7 @@ end
 --- pollable
 --- @return boolean ok
 local function pollable()
-    return poll_pollable()
+    return POLLABLEFN()
 end
 
 --- do_wait
