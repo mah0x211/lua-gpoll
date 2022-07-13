@@ -201,3 +201,19 @@ waits until `duration` seconds have elapsed.
 - `rem:integer`: remaining milliseconds, or `nil` if an error occurs.
 - `err:error`: error object. (default: `errno.ENOTSUP`)
 
+
+## signo, err, timeout = sigwait( duration, signo, ... )
+
+waits for interrupt by the specified signals until the specified time.
+
+**Parameters**
+
+- `duration:integer`: specify a wait `milliseconds` as unsigned integer.
+-- `signo:integer`: valid signal numbers.
+
+**Returns**
+
+- `signo:integer`: received signal number, or `nil` if an error occurs or timed out.
+- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `timeout:boolean`: `true` if operation has timed out.
+
