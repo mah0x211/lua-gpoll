@@ -25,7 +25,9 @@ local io_wait = require('io.wait')
 local io_wait_readable = io_wait.readable
 local io_wait_writable = io_wait.writable
 local msleep = require('nanosleep.msleep')
+local sigtimedwait = require('signal').wait
 local isa = require('isa')
+local is_int = isa.int
 local is_uint = isa.uint
 local is_function = isa.Function
 
@@ -113,11 +115,21 @@ function DEFAULT_POLLER.write_unlock(fd)
 end
 
 --- sleep
---- @param msec integer
+--- @param duration integer
 --- @return rem integer
 --- @return error? err
-function DEFAULT_POLLER.sleep(msec)
-    return msleep(msec)
+function DEFAULT_POLLER.sleep(duration)
+    return msleep(duration)
+end
+
+--- sigwait
+--- @param duration integer
+--- @vararg ... signo
+--- @return integer signo
+--- @return error? err
+--- @return boolean? timeout
+function DEFAULT_POLLER.sigwait(duration, ...)
+    return sigtimedwait(duration, ...)
 end
 
 --- poll_pollable
@@ -145,6 +157,7 @@ local UNLOCKFN = {
     write_unlock = DEFAULT_POLLER.write_unlock,
 }
 local SLEEPFN = DEFAULT_POLLER.sleep
+local SIGWAITFN = DEFAULT_POLLER.sigwait
 
 -- assign to local
 local type = type
@@ -168,6 +181,7 @@ local function set_poller(poller)
             'write_lock',
             'write_unlock',
             'sleep',
+            'sigwait',
         }) do
             local f = poller[k]
             if type(f) ~= 'function' then
@@ -196,6 +210,7 @@ local function set_poller(poller)
         write_unlock = poller.write_unlock,
     }
     SLEEPFN = poller.sleep
+    SIGWAITFN = poller.sigwait
 end
 
 --- pollable
@@ -390,15 +405,15 @@ local function write_unlock(fd)
 end
 
 --- sleep until timer time elapsed
---- @param msec number
+--- @param duration number
 --- @return rem number
 --- @return error? err
-local function sleep(msec)
-    if not is_uint(msec) then
-        error('msec must be uint', 2)
+local function sleep(duration)
+    if not is_uint(duration) then
+        error('duration must be uint', 2)
     end
 
-    local rem, err = SLEEPFN(msec)
+    local rem, err = SLEEPFN(duration)
     if rem then
         if not is_uint(rem) then
             error('sleep returned non-uint value')
@@ -408,6 +423,31 @@ local function sleep(msec)
         return nil, toerror(err)
     end
     error('sleep returned nil without an error')
+end
+
+--- sigwait
+--- @param duration integer
+--- @vararg integer signo
+--- @return integer signo
+--- @return string? err
+--- @return boolean? timeout
+local function sigwait(duration, ...)
+    if not is_uint(duration) then
+        error('duration must be uint', 2)
+    end
+
+    local signo, err, timeout = SIGWAITFN(duration, ...)
+    if signo then
+        if not is_int(signo) then
+            error('sigwait returned non-int value')
+        end
+        return signo
+    elseif err then
+        return nil, toerror(err)
+    elseif timeout then
+        return nil, nil, true
+    end
+    error('sigwait returned nil with neither error nor timeout')
 end
 
 return {
@@ -423,4 +463,5 @@ return {
     read_unlock = read_unlock,
     write_unlock = write_unlock,
     sleep = sleep,
+    sigwait = sigwait,
 }
