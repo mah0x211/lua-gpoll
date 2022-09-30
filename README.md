@@ -34,6 +34,8 @@ gpoll.set_poller({
     -- read_unlock = ...,
     -- write_lock = ...,
     -- write_unlock = ...,
+    -- sleep = ...,
+    -- sigwait = ...,
 })
 ```
 
