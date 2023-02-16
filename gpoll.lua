@@ -132,6 +132,13 @@ function DEFAULT_POLLER.sigwait(duration, ...)
     return sigtimedwait(duration, ...)
 end
 
+--- later
+--- @return boolean ok
+--- @return any err
+function DEFAULT_POLLER.later()
+    return true
+end
+
 --- poll_pollable
 --- @return boolean ok
 function DEFAULT_POLLER.pollable()
@@ -139,6 +146,7 @@ function DEFAULT_POLLER.pollable()
 end
 
 local POLLABLEFN = DEFAULT_POLLER.pollable
+local LATERFN = DEFAULT_POLLER.later
 local WAITFN = {
     wait_readable = DEFAULT_POLLER.wait_readable,
     wait_writable = DEFAULT_POLLER.wait_writable,
@@ -171,6 +179,7 @@ local function set_poller(poller)
     else
         for _, k in ipairs({
             'pollable',
+            'later',
             'wait_readable',
             'unwait_readable',
             'wait_writable',
@@ -192,6 +201,7 @@ local function set_poller(poller)
 
     --- replace poll functions
     POLLABLEFN = poller.pollable
+    LATERFN = poller.later
     WAITFN = {
         wait_readable = poller.wait_readable,
         wait_writable = poller.wait_writable,
@@ -217,6 +227,12 @@ end
 --- @return boolean ok
 local function pollable()
     return POLLABLEFN()
+end
+
+--- later
+--- @return boolean ok
+local function later()
+    return LATERFN()
 end
 
 --- do_wait
@@ -453,6 +469,7 @@ end
 return {
     set_poller = set_poller,
     pollable = pollable,
+    later = later,
     wait_readable = wait_readable,
     wait_writable = wait_writable,
     unwait = unwait,
