@@ -14,8 +14,9 @@ luarocks install gpoll
 
 ***
 
-this module provides only a generic API interfaces for synchronous I/O multiplexing processing. therefore, you must be set the poller for the actual processing.
+# Polling API Interfaces
 
+this module provides only a generic API interfaces for synchronous I/O multiplexing processing. therefore, you must be set the poller for the actual processing.
 
 ## set_poller( [poller] )
 
@@ -25,6 +26,7 @@ set the `poller` to the polling driver. the `poller` object must have the Pollin
 local gpoll = require('gpoll')
 gpoll.set_poller({
     -- pollable = ...,
+    -- later = ...,
     -- wait_readable = ...,
     -- unwait_readable = ...,
     -- wait_writable = ...,
@@ -40,7 +42,6 @@ gpoll.set_poller({
 ```
 
 
-# Polling API Interfaces
 
 
 ## ok = pollable()
@@ -50,6 +51,16 @@ determine the availability of the polling mechanism.
 **Returns**
 
 - `ok:boolean`: `true` on the polling mechanism is available.
+
+
+## ok, err = later()
+
+execute the next line later.
+
+**Returns**
+
+- `ok:boolean`: `true` when a process comes back.
+- `err:any`: error message.
 
 
 ## ok, err, timeout = wait_readable( fd [, duration [, hook [, ctx]]] )
