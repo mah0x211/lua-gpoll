@@ -13,6 +13,15 @@ end
 
 local function test_default()
     -- test that default returns
+    local ok, err = gpoll.pollable()
+    assert.is_false(ok)
+    assert.is_nil(err)
+
+    ok, err = gpoll.later()
+    assert.is_true(ok)
+    assert.is_nil(err)
+
+    local timeout
     for _, fn in ipairs({
         gpoll.unwait,
         gpoll.unwait_readable,
@@ -22,7 +31,7 @@ local function test_default()
         gpoll.read_unlock,
         gpoll.write_unlock,
     }) do
-        local ok, err, timeout = fn(1)
+        ok, err, timeout = fn(1)
         assert.is_false(ok)
         assert.equal(err.type, errno.ENOTSUP)
         assert.is_nil(timeout)
@@ -33,7 +42,7 @@ local function test_default()
         gpoll.wait_readable,
         gpoll.wait_writable,
     }) do
-        local ok, err, timeout = fn(TMPFD)
+        ok, err, timeout = fn(TMPFD)
         assert.is_true(ok)
         assert.is_nil(err)
         assert.is_nil(timeout)
@@ -44,6 +53,9 @@ local function test_set_poller()
     -- test that set custom poller
     gpoll.set_poller({
         pollable = function()
+            return true
+        end,
+        later = function()
             return true
         end,
         wait_readable = NOOP,
@@ -67,6 +79,7 @@ local function test_set_poller()
     -- test that throws an error if poller api is not function
     local err = assert.throws(gpoll.set_poller, {
         pollable = 'pollable',
+        later = 'later',
         wait_readable = 'wait_readable',
         wait_writable = 'wait_writable',
         unwait = 'unwait',
@@ -125,6 +138,7 @@ local function test_wait()
         -- test that return error
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = function()
                 return false, 'wait error'
             end,
@@ -149,6 +163,7 @@ local function test_wait()
         -- test that return timeout
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = function()
                 return false, nil, true
             end,
@@ -191,6 +206,7 @@ local function test_wait()
         -- test that throws an error if wait_readable return false with neither error nor timeout
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = function()
                 return false
             end,
@@ -228,6 +244,7 @@ local function test_unwait()
         -- test that return true
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = function()
@@ -253,6 +270,7 @@ local function test_unwait()
         -- test that return error
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = function()
@@ -282,6 +300,7 @@ local function test_unwait()
         -- test that throws an error if wait_readable return false without error
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = function()
@@ -321,6 +340,7 @@ local function test_lock()
         -- test that return true
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = NOOP,
@@ -345,6 +365,7 @@ local function test_lock()
         -- test that return error
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = NOOP,
@@ -369,6 +390,7 @@ local function test_lock()
         -- test that return timeout
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = NOOP,
@@ -401,6 +423,7 @@ local function test_lock()
         -- test that throws an error if wait_readable return false with neither error nor timeout
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = NOOP,
@@ -437,6 +460,7 @@ local function test_unlock()
         -- test that return true
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = NOOP,
@@ -460,6 +484,7 @@ local function test_unlock()
         -- test that return error
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = NOOP,
@@ -487,6 +512,7 @@ local function test_unlock()
         -- test that throws an error if wait_readable return false without error
         gpoll.set_poller({
             pollable = NOOP,
+            later = NOOP,
             wait_readable = NOOP,
             wait_writable = NOOP,
             unwait = NOOP,
@@ -517,6 +543,7 @@ local function test_sleep()
     -- test that set custome sleep function
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
@@ -538,6 +565,7 @@ local function test_sleep()
     -- test that return error
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
@@ -563,6 +591,7 @@ local function test_sleep()
     -- test that throws an error if sleep return non-uint value
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
@@ -583,6 +612,7 @@ local function test_sleep()
     -- test that throws an error if sleep return nil without an error
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
@@ -624,6 +654,7 @@ local function test_sigwait()
     -- test that set custome sigwait function
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
@@ -646,6 +677,7 @@ local function test_sigwait()
     -- test that return error
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
@@ -668,6 +700,7 @@ local function test_sigwait()
     -- test that return timeout
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
@@ -694,6 +727,7 @@ local function test_sigwait()
     -- test that throws an error if sigwait return non-int value
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
@@ -714,6 +748,7 @@ local function test_sigwait()
     -- test that throws an error if sigwait return nil without an error
     gpoll.set_poller({
         pollable = NOOP,
+        later = NOOP,
         wait_readable = NOOP,
         wait_writable = NOOP,
         unwait = NOOP,
