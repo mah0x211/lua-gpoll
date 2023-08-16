@@ -21,9 +21,6 @@
 --
 local toerror = require('error').toerror
 local new_errno = require('errno').new
-local io_wait = require('io.wait')
-local io_wait_readable = io_wait.readable
-local io_wait_writable = io_wait.writable
 local isa = require('isa')
 local is_int = isa.int
 local is_uint = isa.uint
@@ -39,7 +36,7 @@ local DEFAULT_POLLER = {}
 --- @return any err
 --- @return boolean? timeout
 function DEFAULT_POLLER.wait_readable(fd, msec)
-    return io_wait_readable(fd, msec)
+    return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- wait_writable
@@ -49,7 +46,7 @@ end
 --- @return any err
 --- @return boolean? timeout
 function DEFAULT_POLLER.wait_writable(fd, msec)
-    return io_wait_writable(fd, msec)
+    return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- unwait

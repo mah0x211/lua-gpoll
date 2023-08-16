@@ -88,7 +88,7 @@ wait until the file descriptor is writable.
 - `fd:integer`: a file descriptor.
 - `msec:integer`: specify a msec `milliseconds` as unsigned integer.
 - `hook:function`: a hook function that calls before polling a status of file descriptor.
-- `ctx:any: any value for hook function.
+- `ctx:any`: any value for hook function.
 
 **Returns**
 
