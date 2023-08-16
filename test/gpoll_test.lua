@@ -47,6 +47,13 @@ local function test_default()
         assert.is_nil(err)
         assert.is_nil(timeout)
     end
+
+    -- wait signal
+    local signo
+    signo, err, timeout = gpoll.sigwait(100, signal.SIGINT)
+    assert.is_nil(signo)
+    assert.equal(err.type, errno.ENOTSUP)
+    assert.is_nil(timeout)
 end
 
 local function test_set_poller()
@@ -641,8 +648,8 @@ local function test_sigwait()
         os.exit(0)
     end
     local signo, err, timeout = gpoll.sigwait(500, signal.SIGINT)
-    assert.equal(signo, signal.SIGINT)
-    assert.is_nil(err)
+    assert.is_nil(signo)
+    assert.equal(err.type, errno.ENOTSUP)
     assert.is_nil(timeout)
 
     -- test that timeout

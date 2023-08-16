@@ -25,7 +25,6 @@ local io_wait = require('io.wait')
 local io_wait_readable = io_wait.readable
 local io_wait_writable = io_wait.writable
 local msleep = require('nanosleep.msleep')
-local sigtimedwait = require('signal').wait
 local isa = require('isa')
 local is_int = isa.int
 local is_uint = isa.uint
@@ -125,11 +124,11 @@ end
 --- sigwait
 --- @param msec integer
 --- @param ... integer signal-number
---- @return integer signo
+--- @return integer? signo
 --- @return any err
 --- @return boolean? timeout
 function DEFAULT_POLLER.sigwait(msec, ...)
-    return sigtimedwait(msec, ...)
+    return nil, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- later

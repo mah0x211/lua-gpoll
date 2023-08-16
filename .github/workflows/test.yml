@@ -58,6 +58,7 @@ jobs:
         luarocks install fork
         luarocks install getpid
         luarocks install io-fileno
+        luarocks install signal
     -
       name: Install
       run: |
