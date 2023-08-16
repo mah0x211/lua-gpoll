@@ -42,8 +42,6 @@ gpoll.set_poller({
 ```
 
 
-
-
 ## ok = pollable()
 
 determine the availability of the polling mechanism.
@@ -63,39 +61,39 @@ execute the next line later.
 - `err:any`: error message.
 
 
-## ok, err, timeout = wait_readable( fd [, duration [, hook [, ctx]]] )
+## ok, err, timeout = wait_readable( fd [, msec [, hook [, ctx]]] )
 
 wait until the file descriptor is readable.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `duration:integer`: specify a duration `milliseconds` as unsigned integer.
+- `msec:integer`: specify a msec `milliseconds` as unsigned integer.
 - `hook:function`: a hook function that calls before polling a status of file descriptor.
 - `ctx:any: any value for hook function.
 
 **Returns**
 
 - `ok:boolean`: `true` on readable. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 - `timeout:boolean`: `true` if operation has timed out.
 
 
-## ok, err, timeout = wait_writable( fd [, duration [, hook [, ctx]]] )
+## ok, err, timeout = wait_writable( fd [, msec [, hook [, ctx]]] )
 
 wait until the file descriptor is writable.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `duration:integer`: specify a duration `milliseconds` as unsigned integer.
+- `msec:integer`: specify a msec `milliseconds` as unsigned integer.
 - `hook:function`: a hook function that calls before polling a status of file descriptor.
 - `ctx:any: any value for hook function.
 
 **Returns**
 
 - `ok:boolean`: `true` on writable. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 - `timeout:boolean`: `true` if operation has timed out.
 
 
@@ -110,7 +108,7 @@ cancel waiting for file descriptor to be readable.
 **Returns**
 
 - `ok:boolean`: `true` on success. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
 ## ok, err = unwait_writable( fd )
@@ -124,7 +122,7 @@ cancel waiting for file descriptor to be writable.
 **Returns**
 
 - `ok:boolean`: `true` on success. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
 ## ok, err = unwait( fd )
@@ -138,22 +136,22 @@ cancels waiting for file descriptor to be readable/writable.
 **Returns**
 
 - `ok:boolean`: `true` on success. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## ok, err, timeout = read_lock( fd [, duration] )
+## ok, err, timeout = read_lock( fd [, msec] )
 
 waits until a read lock is acquired.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `duration:integer`: a duration `milliseconds` as unsigned integer.
+- `msec:integer`: a msec `milliseconds` as unsigned integer.
 
 **Returns**
 
 - `ok:boolean`: `true` on success. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 - `timeout:boolean`: `true` if operation has timed out.
 
 
@@ -168,22 +166,22 @@ releases a read lock.
 **Returns**
 
 - `ok:boolean`: `true` on success. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## ok, err, timeout = write_lock( fd [, duration] )
+## ok, err, timeout = write_lock( fd [, msec] )
 
 waits until a write lock is acquired.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `duration:integer`: a duration `milliseconds` as unsigned integer.
+- `msec:integer`: a msec `milliseconds` as unsigned integer.
 
 **Returns**
 
 - `ok:boolean`: `true` on success. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 - `timeout:boolean`: `true` if operation has timed out.
 
 
@@ -198,30 +196,30 @@ releases a write lock.
 **Returns**
 
 - `ok:boolean`: `true` on success. (default: `false`)
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## rem, err = sleep( duration )
+## rem, err = sleep( msec )
 
-waits until `duration` seconds have elapsed.
+waits until `msec` seconds have elapsed.
 
 **Parameters**
 
-- `duration:integer`: specify a wait `milliseconds` as unsigned integer.
+- `msec:integer`: specify a wait `milliseconds` as unsigned integer.
 
 **Returns**
 
 - `rem:integer`: remaining milliseconds, or `nil` if an error occurs.
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## signo, err, timeout = sigwait( duration, signo, ... )
+## signo, err, timeout = sigwait( msec, signo, ... )
 
 waits for interrupt by the specified signals until the specified time.
 
 **Parameters**
 
-- `duration:integer`: specify a wait `milliseconds` as unsigned integer.
+- `msec:integer`: specify a wait `milliseconds` as unsigned integer.
 -- `signo:integer`: valid signal numbers.
 
 **Returns**

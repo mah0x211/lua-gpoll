@@ -189,9 +189,9 @@ local function test_wait()
         err = assert.throws(waitfn, 'hello')
         assert.match(err, 'fd must be uint')
 
-        -- test that throws an error if duration is invalid
+        -- test that throws an error if msec is invalid
         err = assert.throws(waitfn, TMPFD, 'hello')
-        assert.match(err, 'duration must be uint')
+        assert.match(err, 'msec must be uint')
 
         -- test that throws an error if hookfn is invalid
         err = assert.throws(waitfn, TMPFD, nil, {})
@@ -416,9 +416,9 @@ local function test_lock()
         err = assert.throws(fn, 'hello')
         assert.match(err, 'fd must be uint')
 
-        -- test that throws an error if duration is invalid
+        -- test that throws an error if msec is invalid
         err = assert.throws(fn, TMPFD, 'hello')
-        assert.match(err, 'duration must be uint')
+        assert.match(err, 'msec must be uint')
 
         -- test that throws an error if wait_readable return false with neither error nor timeout
         gpoll.set_poller({
@@ -584,9 +584,9 @@ local function test_sleep()
     assert.is_nil(rem)
     assert.match(err, 'sleep error')
 
-    -- test that throws an error if duration is invalid
+    -- test that throws an error if msec is invalid
     err = assert.throws(gpoll.sleep, math.huge)
-    assert.match(err, 'duration must be uint')
+    assert.match(err, 'msec must be uint')
 
     -- test that throws an error if sleep return non-uint value
     gpoll.set_poller({
@@ -720,9 +720,9 @@ local function test_sigwait()
     assert.is_nil(err)
     assert.is_true(timeout)
 
-    -- test that throws an error if duration is invalid
+    -- test that throws an error if msec is invalid
     err = assert.throws(gpoll.sigwait, math.huge)
-    assert.match(err, 'duration must be uint')
+    assert.match(err, 'msec must be uint')
 
     -- test that throws an error if sigwait return non-int value
     gpoll.set_poller({
