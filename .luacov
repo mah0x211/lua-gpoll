@@ -1,6 +1,6 @@
 codefromstrings = false
 runreport = true
-deletestats = false
+deletestats = true
 modules = {
-    ['gpoll'] = 'gpoll.lua',
+    gpoll = "gpoll.lua",
 }

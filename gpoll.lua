@@ -21,11 +21,6 @@
 --
 local toerror = require('error').toerror
 local new_errno = require('errno').new
-local io_wait = require('io.wait')
-local io_wait_readable = io_wait.readable
-local io_wait_writable = io_wait.writable
-local msleep = require('nanosleep.msleep')
-local sigtimedwait = require('signal').wait
 local isa = require('isa')
 local is_int = isa.int
 local is_uint = isa.uint
@@ -36,28 +31,28 @@ local DEFAULT_POLLER = {}
 
 --- wait_readable
 --- @param fd integer
---- @param duration integer
+--- @param msec integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.wait_readable(fd, duration)
-    return io_wait_readable(fd, duration)
+function DEFAULT_POLLER.wait_readable(fd, msec)
+    return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- wait_writable
 --- @param fd integer
---- @param duration integer
+--- @param msec integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.wait_writable(fd, duration)
-    return io_wait_writable(fd, duration)
+function DEFAULT_POLLER.wait_writable(fd, msec)
+    return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- unwait
---- @param fd
+--- @param fd integer
 --- @return boolean? ok
---- @return error? err
+--- @return any err
 function DEFAULT_POLLER.unwait(fd)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
@@ -65,7 +60,7 @@ end
 --- unwait_readable
 --- @param fd integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 function DEFAULT_POLLER.unwait_readable(fd)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
@@ -73,35 +68,35 @@ end
 --- unwait_writable
 --- @param fd integer
 --- @return boolean? ok
---- @return error? err
+--- @return any err
 function DEFAULT_POLLER.unwait_writable(fd)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- read_lock
 --- @param fd integer
---- @param duration integer
+--- @param msec integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.read_lock(fd, duration)
+function DEFAULT_POLLER.read_lock(fd, msec)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- write_lock
 --- @param fd integer
---- @param duration integer
+--- @param msec integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.write_lock(fd, duration)
+function DEFAULT_POLLER.write_lock(fd, msec)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- read_unlock
 --- @param fd integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 function DEFAULT_POLLER.read_unlock(fd)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
@@ -109,27 +104,27 @@ end
 --- write_unlock
 --- @param fd integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 function DEFAULT_POLLER.write_unlock(fd)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- sleep
---- @param duration integer
---- @return rem integer
---- @return error? err
-function DEFAULT_POLLER.sleep(duration)
-    return msleep(duration)
+--- @param msec integer
+--- @return integer rem
+--- @return any err
+function DEFAULT_POLLER.sleep(msec)
+    return nil, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- sigwait
---- @param duration integer
---- @vararg ... signo
---- @return integer signo
---- @return error? err
+--- @param msec integer
+--- @param ... integer signal-number
+--- @return integer? signo
+--- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.sigwait(duration, ...)
-    return sigtimedwait(duration, ...)
+function DEFAULT_POLLER.sigwait(msec, ...)
+    return nil, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- later
@@ -238,17 +233,17 @@ end
 --- do_wait
 --- @param fname string
 --- @param fd integer
---- @param duration? integer
+--- @param msec? integer
 --- @param hookfn? function
 --- @param ctx? any
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-local function do_wait(fname, fd, duration, hookfn, ctx)
+local function do_wait(fname, fd, msec, hookfn, ctx)
     if not is_uint(fd) then
         error('fd must be uint', 2)
-    elseif duration ~= nil and not is_uint(duration) then
-        error('duration must be uint', 2)
+    elseif msec ~= nil and not is_uint(msec) then
+        error('msec must be uint', 2)
     end
 
     -- call hook function before wait
@@ -257,7 +252,7 @@ local function do_wait(fname, fd, duration, hookfn, ctx)
             error('hookfn must be function', 2)
         end
 
-        local ok, err, timeout = hookfn(ctx, duration)
+        local ok, err, timeout = hookfn(ctx, msec)
         if not ok then
             if err then
                 return false, toerror(err), timeout
@@ -268,7 +263,7 @@ local function do_wait(fname, fd, duration, hookfn, ctx)
         end
     end
 
-    local ok, err, timeout = WAITFN[fname](fd, duration)
+    local ok, err, timeout = WAITFN[fname](fd, msec)
     if ok then
         return true
     elseif err then
@@ -283,7 +278,7 @@ end
 --- @param fname string
 --- @param fd integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 local function do_unwait(fname, fd)
     if not is_uint(fd) then
         error('fd must be uint', 2)
@@ -301,18 +296,18 @@ end
 --- do_lock waits until a lock is acquired
 --- @param fname string
 --- @param fd integer
---- @param duration? integer
+--- @param msec? integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-local function do_lock(fname, fd, duration)
+local function do_lock(fname, fd, msec)
     if not is_uint(fd) then
         error('fd must be uint', 2)
-    elseif duration ~= nil and not is_uint(duration) then
-        error('duration must be uint', 2)
+    elseif msec ~= nil and not is_uint(msec) then
+        error('msec must be uint', 2)
     end
 
-    local ok, err, timeout = LOCKFN[fname](fd, duration)
+    local ok, err, timeout = LOCKFN[fname](fd, msec)
     if ok then
         return true
     elseif err then
@@ -327,7 +322,7 @@ end
 --- @param fname string
 --- @param fd integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 local function do_unlock(fname, fd)
     if not is_uint(fd) then
         error('fd must be uint', 2)
@@ -344,26 +339,26 @@ end
 
 --- wait_readable
 --- @param fd integer
---- @param duration? integer
+--- @param msec? integer
 --- @param hookfn? function
 --- @param ctx? any
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-local function wait_readable(fd, duration, hookfn, ctx)
-    return do_wait('wait_readable', fd, duration, hookfn, ctx)
+local function wait_readable(fd, msec, hookfn, ctx)
+    return do_wait('wait_readable', fd, msec, hookfn, ctx)
 end
 
 --- wait_writable
 --- @param fd integer
---- @param duration? integer
+--- @param msec? integer
 --- @param hookfn? function
 --- @param ctx? any
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-local function wait_writable(fd, duration, hookfn, ctx)
-    return do_wait('wait_writable', fd, duration, hookfn, ctx)
+local function wait_writable(fd, msec, hookfn, ctx)
+    return do_wait('wait_writable', fd, msec, hookfn, ctx)
 end
 
 --- unwait
@@ -386,28 +381,28 @@ end
 
 --- read_lock waits until a read lock is acquired
 --- @param fd integer
---- @param duration? integer
+--- @param msec? integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-local function read_lock(fd, duration)
-    return do_lock('read_lock', fd, duration)
+local function read_lock(fd, msec)
+    return do_lock('read_lock', fd, msec)
 end
 
 --- write_lock waits until a write lock is acquired
 --- @param fd integer
---- @param duration? integer
+--- @param msec? integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 --- @return boolean? timeout
-local function write_lock(fd, duration)
-    return do_lock('write_lock', fd, duration)
+local function write_lock(fd, msec)
+    return do_lock('write_lock', fd, msec)
 end
 
 --- read_unlock releases a read lock
 --- @param fd integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 local function read_unlock(fd)
     return do_unlock('read_unlock', fd)
 end
@@ -415,21 +410,21 @@ end
 --- write_unlock releases a write lock
 --- @param fd integer
 --- @return boolean ok
---- @return error? err
+--- @return any err
 local function write_unlock(fd)
     return do_unlock('write_unlock', fd)
 end
 
 --- sleep until timer time elapsed
---- @param duration number
---- @return rem number
---- @return error? err
-local function sleep(duration)
-    if not is_uint(duration) then
-        error('duration must be uint', 2)
+--- @param msec number
+--- @return number rem
+--- @return any err
+local function sleep(msec)
+    if not is_uint(msec) then
+        error('msec must be uint', 2)
     end
 
-    local rem, err = SLEEPFN(duration)
+    local rem, err = SLEEPFN(msec)
     if rem then
         if not is_uint(rem) then
             error('sleep returned non-uint value')
@@ -442,17 +437,17 @@ local function sleep(duration)
 end
 
 --- sigwait
---- @param duration integer
---- @vararg integer signo
+--- @param msec integer
+--- @param ... integer signal-number
 --- @return integer signo
---- @return string? err
+--- @return any err
 --- @return boolean? timeout
-local function sigwait(duration, ...)
-    if not is_uint(duration) then
-        error('duration must be uint', 2)
+local function sigwait(msec, ...)
+    if not is_uint(msec) then
+        error('msec must be uint', 2)
     end
 
-    local signo, err, timeout = SIGWAITFN(duration, ...)
+    local signo, err, timeout = SIGWAITFN(msec, ...)
     if signo then
         if not is_int(signo) then
             error('sigwait returned non-int value')
