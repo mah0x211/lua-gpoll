@@ -54,6 +54,12 @@ local function test_default()
     assert.is_nil(signo)
     assert.equal(err.type, errno.ENOTSUP)
     assert.is_nil(timeout)
+
+    -- wait sleep
+    local rem
+    rem, err = gpoll.sleep(100)
+    assert.is_nil(rem)
+    assert.equal(err.type, errno.ENOTSUP)
 end
 
 local function test_set_poller()
@@ -544,8 +550,8 @@ end
 local function test_sleep()
     -- test that sleep for 1 sec
     local rem, err = gpoll.sleep(1000)
-    assert.equal(rem, 0)
-    assert.is_nil(err)
+    assert.is_nil(rem)
+    assert.equal(err.type, errno.ENOTSUP)
 
     -- test that set custome sleep function
     gpoll.set_poller({

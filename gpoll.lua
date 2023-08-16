@@ -24,7 +24,6 @@ local new_errno = require('errno').new
 local io_wait = require('io.wait')
 local io_wait_readable = io_wait.readable
 local io_wait_writable = io_wait.writable
-local msleep = require('nanosleep.msleep')
 local isa = require('isa')
 local is_int = isa.int
 local is_uint = isa.uint
@@ -118,7 +117,7 @@ end
 --- @return integer rem
 --- @return any err
 function DEFAULT_POLLER.sleep(msec)
-    return msleep(msec)
+    return nil, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- sigwait
