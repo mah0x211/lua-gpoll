@@ -29,6 +29,40 @@ local is_function = isa.Function
 --- @class Poller
 local DEFAULT_POLLER = {}
 
+--- new_readable_event
+--- @param fd integer
+--- @return string evid
+--- @return any err
+function DEFAULT_POLLER.new_readable_event(fd)
+    return nil, new_errno('ENOTSUP', 'not pollable')
+end
+
+--- new_writable_event
+--- @param fd integer
+--- @return string evid
+--- @return any err
+function DEFAULT_POLLER.new_writable_event(fd)
+    return nil, new_errno('ENOTSUP', 'not pollable')
+end
+
+--- dispose_event
+--- @param evid string
+--- @return boolean ok
+--- @return any err
+function DEFAULT_POLLER.dispose_event(evid)
+    return false, new_errno('ENOTSUP', 'not pollable')
+end
+
+--- wait_event
+--- @param evid string
+--- @param msec integer
+--- @return boolean ok
+--- @return any err
+--- @return boolean? timeout
+function DEFAULT_POLLER.wait_event(evid, msec)
+    return false, new_errno('ENOTSUP', 'not pollable')
+end
+
 --- wait_readable
 --- @param fd integer
 --- @param msec integer
@@ -142,6 +176,10 @@ end
 
 local POLLABLEFN = DEFAULT_POLLER.pollable
 local LATERFN = DEFAULT_POLLER.later
+local NEW_READABLE_EVENTFN = DEFAULT_POLLER.new_readable_event
+local NEW_WRITABLE_EVENTFN = DEFAULT_POLLER.new_writable_event
+local WAIT_EVENTFN = DEFAULT_POLLER.wait_event
+local DISPOSE_EVENTFN = DEFAULT_POLLER.dispose_event
 local WAITFN = {
     wait_readable = DEFAULT_POLLER.wait_readable,
     wait_writable = DEFAULT_POLLER.wait_writable,
@@ -175,6 +213,10 @@ local function set_poller(poller)
         for _, k in ipairs({
             'pollable',
             'later',
+            'new_readable_event',
+            'new_writable_event',
+            'wait_event',
+            'dispose_event',
             'wait_readable',
             'unwait_readable',
             'wait_writable',
@@ -197,6 +239,10 @@ local function set_poller(poller)
     --- replace poll functions
     POLLABLEFN = poller.pollable
     LATERFN = poller.later
+    NEW_READABLE_EVENTFN = poller.new_readable_event
+    NEW_WRITABLE_EVENTFN = poller.new_writable_event
+    WAIT_EVENTFN = poller.wait_event
+    DISPOSE_EVENTFN = poller.dispose_event
     WAITFN = {
         wait_readable = poller.wait_readable,
         wait_writable = poller.wait_writable,
@@ -461,6 +507,103 @@ local function sigwait(msec, ...)
     error('sigwait returned nil with neither error nor timeout')
 end
 
+--- new_readable_event
+--- @param fd integer
+--- @return any evid
+--- @return any err
+local function new_readable_event(fd)
+    if not is_uint(fd) then
+        error('fd must be uint', 2)
+    end
+
+    local evid, err = NEW_READABLE_EVENTFN(fd)
+    if evid ~= nil then
+        return evid
+    elseif err then
+        return nil, toerror(err)
+    end
+    error('new_readable_event returned nil with no error')
+end
+
+--- new_writable_event
+--- @param fd integer
+--- @return any evid
+--- @return any err
+local function new_writable_event(fd)
+    if not is_uint(fd) then
+        error('fd must be uint', 2)
+    end
+
+    local evid, err = NEW_WRITABLE_EVENTFN(fd)
+    if evid ~= nil then
+        return evid
+    elseif err then
+        return nil, toerror(err)
+    end
+    error('new_writable_event returned nil with no error')
+end
+
+--- dispose_event
+--- @param evid any
+--- @return boolean ok
+--- @return any err
+local function dispose_event(evid)
+    if evid == nil then
+        error('evid must not be nil', 2)
+    end
+
+    local ok, err = DISPOSE_EVENTFN(evid)
+    if ok then
+        return true
+    elseif err then
+        return false, toerror(err)
+    end
+    error('dispose_event returned nil with no error')
+end
+
+--- wait_event
+--- @param evid any
+--- @param msec? integer
+--- @param hookfn? function
+--- @param ctx? any
+--- @return boolean ok
+--- @return any err
+--- @return boolean? timeout
+local function wait_event(evid, msec, hookfn, ctx)
+    if evid == nil then
+        error('evid must not be nil', 2)
+    elseif msec ~= nil and not is_uint(msec) then
+        error('msec must be uint', 2)
+    end
+
+    -- call hook function before wait
+    if hookfn ~= nil then
+        if not is_function(hookfn) then
+            error('hookfn must be function', 2)
+        end
+
+        local ok, err, timeout = hookfn(ctx, msec)
+        if not ok then
+            if err then
+                return false, toerror(err), timeout
+            elseif timeout then
+                return false, nil, true
+            end
+            error('hookfn returned false|nil with neither error nor timeout')
+        end
+    end
+
+    local ok, err, timeout = WAIT_EVENTFN(evid, msec)
+    if ok then
+        return true
+    elseif err then
+        return false, toerror(err), timeout
+    elseif timeout then
+        return false, nil, true
+    end
+    error('wait_event returned false|nil with neither error nor timeout')
+end
+
 return {
     set_poller = set_poller,
     pollable = pollable,
@@ -476,4 +619,8 @@ return {
     write_unlock = write_unlock,
     sleep = sleep,
     sigwait = sigwait,
+    new_readable_event = new_readable_event,
+    new_writable_event = new_writable_event,
+    dispose_event = dispose_event,
+    wait_event = wait_event,
 }

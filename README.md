@@ -61,6 +61,66 @@ execute the next line later.
 - `err:any`: error message.
 
 
+## evid, err = new_readable_event( fd )
+
+create a new readable event object for the specified file descriptor `fd` and returns an event id.
+
+**Parameters**
+
+- `fd:integer`: a file descriptor.
+
+**Returns**
+
+- `evid:any`: an event id.
+- `err:any`: error object. (default: `errno.ENOTSUP`)
+
+
+## evid, err = new_writable_event( fd )
+
+create a new writable event object for the specified file descriptor `fd` and returns an event id.
+
+**Parameters**
+
+- `fd:integer`: a file descriptor.
+
+**Returns**
+
+- `evid:any`: an event id.
+- `err:any`: error object. (default: `errno.ENOTSUP`)
+
+
+## ok, err = dispose_event( evid )
+
+dispose the event object associated with the specified event id `evid`.
+
+**Parameters**
+
+- `evid:any`: an event id.
+
+**Returns**
+
+- `ok:boolean`: `true` on success.
+- `err:any`: error object. (default: `errno.ENOTSUP`)
+
+
+## ok, err, timeout = wait_event( evid [, msec [, hook [, ctx]]] )
+
+wait until the event object associated with the specified event id `evid` is signaled.
+
+**Parameters**
+
+- `evid:any`: an event id returned by `new_readable_event` or `new_writable_event`.
+- `msec:integer`: specify a msec `milliseconds` as unsigned integer.
+- `hook:function`: a hook function that calls before polling a status of event object.
+- `ctx:any`: any value for hook function.
+
+**Returns**
+
+- `ok:boolean`: `true` on signaled. (default: `false`)
+- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `timeout:boolean`: `true` if operation has timed out.
+
+
 ## ok, err, timeout = wait_readable( fd [, msec [, hook [, ctx]]] )
 
 wait until the file descriptor is readable.
