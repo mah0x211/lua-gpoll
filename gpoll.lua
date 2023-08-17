@@ -454,7 +454,7 @@ local function sigwait(msec, ...)
         end
         return signo
     elseif err then
-        return nil, toerror(err)
+        return nil, toerror(err), timeout
     elseif timeout then
         return nil, nil, true
     end

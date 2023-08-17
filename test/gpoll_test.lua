@@ -8,7 +8,17 @@ local signal = require('signal')
 local gpoll = require('gpoll')
 local TMPFILE = assert(io.tmpfile())
 local TMPFD = require('io.fileno')(TMPFILE)
-local NOOP = function()
+local DEFAULT_FUNCS = {}
+for name, fn in pairs(gpoll) do
+    DEFAULT_FUNCS[name] = fn
+end
+
+local function do_set_poller(funcs)
+    local new_funcs = {}
+    for name, fn in pairs(DEFAULT_FUNCS) do
+        new_funcs[name] = funcs[name] or fn
+    end
+    gpoll.set_poller(new_funcs)
 end
 
 local function test_default()
@@ -55,28 +65,14 @@ end
 
 local function test_set_poller()
     -- test that set custom poller
-    gpoll.set_poller({
+    do_set_poller({
         pollable = function()
             return true
         end,
-        later = function()
-            return true
-        end,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
-        sleep = NOOP,
-        sigwait = NOOP,
     })
     assert.is_true(gpoll.pollable())
 
-    -- test that set default poller if poller argument is nil
+    -- test that poller can be reset to default with nil
     gpoll.set_poller()
     assert.is_false(gpoll.pollable())
 
@@ -99,468 +95,527 @@ local function test_set_poller()
     assert.match(err, 'is not function')
 end
 
-local function test_wait()
-    for _, waitfn in ipairs({
-        gpoll.wait_readable,
-        gpoll.wait_writable,
-    }) do
-        gpoll.set_poller()
+local function test_wait_readable()
+    gpoll.set_poller()
 
-        -- test that true if fd is wait readable/writable
-        local ok, err, timeout = waitfn(TMPFD)
-        assert.is_false(ok)
-        assert.equal(err.type, errno.ENOTSUP)
-        assert.is_nil(timeout)
+    -- test that true if fd is wait readable
+    local ok, err, timeout = gpoll.wait_readable(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+    assert.is_nil(timeout)
 
-        -- test that hookfn is called before waiting for fd event
-        local called = false
-        ok, err, timeout = waitfn(TMPFD, nil, function()
-            called = true
-            return true
-        end)
-        assert.is_false(ok)
-        assert.equal(err.type, errno.ENOTSUP)
-        assert.is_nil(timeout)
-        assert.is_true(called)
+    -- test that hookfn is called before waiting for fd event
+    local called = false
+    ok, err, timeout = gpoll.wait_readable(TMPFD, nil, function()
+        called = true
+        return true
+    end)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+    assert.is_nil(timeout)
+    assert.is_true(called)
 
-        -- test that return error from hookfn
-        ok, err, timeout = waitfn(TMPFD, nil, function()
-            return false, 'hook error'
-        end)
-        assert.is_false(ok)
-        assert.match(err, 'hook error')
-        assert.is_nil(timeout)
+    -- test that return error from hookfn
+    ok, err, timeout = gpoll.wait_readable(TMPFD, nil, function()
+        return false, 'hook error', true
+    end)
+    assert.is_false(ok)
+    assert.match(err, 'hook error')
+    assert.is_true(timeout)
 
-        -- test that return timeout from hookfn
-        ok, err, timeout = waitfn(TMPFD, nil, function()
+    -- test that return timeout from hookfn
+    ok, err, timeout = gpoll.wait_readable(TMPFD, nil, function()
+        return false, nil, true
+    end)
+    assert.is_false(ok)
+    assert.is_nil(err)
+    assert.is_true(timeout)
+
+    -- test that return only true
+    do_set_poller({
+        wait_readable = function()
+            return true, 'this error is ignored', true
+        end,
+    })
+    ok, err, timeout = gpoll.wait_readable(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+
+    -- test that return error
+    do_set_poller({
+        wait_readable = function()
+            return false, 'wait error', true
+        end,
+    })
+    ok, err, timeout = gpoll.wait_readable(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'wait error')
+    assert.is_true(timeout)
+
+    -- test that return timeout
+    do_set_poller({
+        wait_readable = function()
             return false, nil, true
-        end)
-        assert.is_false(ok)
-        assert.is_nil(err)
-        assert.is_true(timeout)
+        end,
+    })
+    ok, err, timeout = gpoll.wait_readable(TMPFD)
+    assert.is_false(ok)
+    assert.is_nil(err)
+    assert.is_true(timeout)
 
-        -- test that return true
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = function()
-                return true, 'this error is ignored'
-            end,
-            wait_writable = function()
-                return true, 'this error is ignored'
-            end,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err, timeout = waitfn(TMPFD)
-        assert.is_true(ok)
-        assert.is_nil(err)
-        assert.is_nil(timeout)
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.wait_readable, 'hello')
+    assert.match(err, 'fd must be uint')
 
-        -- test that return error
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = function()
-                return false, 'wait error'
-            end,
-            wait_writable = function()
-                return false, 'wait error'
-            end,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err, timeout = waitfn(TMPFD)
-        assert.is_false(ok)
-        assert.match(err, 'wait error')
-        assert.is_nil(timeout)
+    -- test that throws an error if msec is invalid
+    err = assert.throws(gpoll.wait_readable, TMPFD, 'hello')
+    assert.match(err, 'msec must be uint')
 
-        -- test that return timeout
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = function()
-                return false, nil, true
-            end,
-            wait_writable = function()
-                return false, nil, true
-            end,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err, timeout = waitfn(TMPFD)
-        assert.is_false(ok)
-        assert.is_nil(err)
-        assert.is_true(timeout)
+    -- test that throws an error if hookfn is invalid
+    err = assert.throws(gpoll.wait_readable, TMPFD, nil, {})
+    assert.match(err, 'hookfn must be function')
 
-        -- test that throws an error if fd is invalid
-        err = assert.throws(waitfn, 'hello')
-        assert.match(err, 'fd must be uint')
+    -- test that throws an error if hookfn return false with neither error nor timeout
+    err = assert.throws(gpoll.wait_readable, TMPFD, nil, function()
+        return false
+    end)
+    assert.match(err, 'hookfn .+ neither error nor timeout', false)
 
-        -- test that throws an error if msec is invalid
-        err = assert.throws(waitfn, TMPFD, 'hello')
-        assert.match(err, 'msec must be uint')
-
-        -- test that throws an error if hookfn is invalid
-        err = assert.throws(waitfn, TMPFD, nil, {})
-        assert.match(err, 'hookfn must be function')
-
-        -- test that throws an error if hookfn return false with neither error nor timeout
-        err = assert.throws(waitfn, TMPFD, nil, function()
+    -- test that throws an error if wait_readable return false with neither error nor timeout
+    do_set_poller({
+        wait_readable = function()
             return false
-        end)
-        assert.match(err, 'hookfn .+ neither error nor timeout', false)
+        end,
+    })
+    err = assert.throws(gpoll.wait_readable, TMPFD)
+    assert.match(err, 'wait_readable .+ neither error nor timeout', false)
+end
 
-        -- test that throws an error if wait_readable return false with neither error nor timeout
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = function()
-                return false
-            end,
-            wait_writable = function()
-                return false
-            end,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        err = assert.throws(waitfn, TMPFD)
-        assert.match(err, 'wait_.+ neither error nor timeout', false)
-    end
+local function test_wait_writable()
+    gpoll.set_poller()
+
+    -- test that true if fd is wait writable
+    local ok, err, timeout = gpoll.wait_writable(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+    assert.is_nil(timeout)
+
+    -- test that hookfn is called before waiting for fd event
+    local called = false
+    ok, err, timeout = gpoll.wait_writable(TMPFD, nil, function()
+        called = true
+        return true
+    end)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+    assert.is_nil(timeout)
+    assert.is_true(called)
+
+    -- test that return error from hookfn
+    ok, err, timeout = gpoll.wait_writable(TMPFD, nil, function()
+        return false, 'hook error'
+    end)
+    assert.is_false(ok)
+    assert.match(err, 'hook error')
+    assert.is_nil(timeout)
+
+    -- test that return timeout from hookfn
+    ok, err, timeout = gpoll.wait_writable(TMPFD, nil, function()
+        return false, nil, true
+    end)
+    assert.is_false(ok)
+    assert.is_nil(err)
+    assert.is_true(timeout)
+
+    -- test that return only true
+    do_set_poller({
+        wait_writable = function()
+            return true, 'this error is ignored', true
+        end,
+    })
+    ok, err, timeout = gpoll.wait_writable(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+
+    -- test that return error and timeout
+    do_set_poller({
+        wait_writable = function()
+            return false, 'wait error', true
+        end,
+    })
+    ok, err, timeout = gpoll.wait_writable(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'wait error')
+    assert.is_true(timeout)
+
+    -- test that return timeout
+    do_set_poller({
+        wait_writable = function()
+            return false, nil, true
+        end,
+    })
+    ok, err, timeout = gpoll.wait_writable(TMPFD)
+    assert.is_false(ok)
+    assert.is_nil(err)
+    assert.is_true(timeout)
+
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.wait_writable, 'hello')
+    assert.match(err, 'fd must be uint')
+
+    -- test that throws an error if msec is invalid
+    err = assert.throws(gpoll.wait_writable, TMPFD, 'hello')
+    assert.match(err, 'msec must be uint')
+
+    -- test that throws an error if hookfn is invalid
+    err = assert.throws(gpoll.wait_writable, TMPFD, nil, {})
+    assert.match(err, 'hookfn must be function')
+
+    -- test that throws an error if hookfn return false with neither error nor timeout
+    err = assert.throws(gpoll.wait_writable, TMPFD, nil, function()
+        return false
+    end)
+    assert.match(err, 'hookfn .+ neither error nor timeout', false)
+
+    -- test that throws an error if wait_writable return false with neither error nor timeout
+    do_set_poller({
+        wait_writable = function()
+            return false
+        end,
+    })
+    err = assert.throws(gpoll.wait_writable, TMPFD)
+    assert.match(err, 'wait_writable .+ neither error nor timeout', false)
+end
+
+local function test_unwait_readable()
+    gpoll.set_poller()
+
+    -- test that true if fd is unwait readable
+    local ok, err = gpoll.unwait_readable(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+
+    -- test that return only true
+    do_set_poller({
+        unwait_readable = function()
+            return true, 'this error is ignored'
+        end,
+    })
+    ok, err = gpoll.unwait_readable(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
+
+    -- test that return error
+    do_set_poller({
+        unwait_readable = function()
+            return false, 'unwait error'
+        end,
+    })
+    ok, err = gpoll.unwait_readable(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'unwait error')
+
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.unwait_readable, 'hello')
+    assert.match(err, 'fd must be uint')
+
+    -- test that throws an error if unwait_readable return false without error
+    do_set_poller({
+        unwait_readable = function()
+            return false
+        end,
+    })
+    err = assert.throws(gpoll.unwait_readable, TMPFD)
+    assert.match(err, 'unwait_readable .+ without an error', false)
+end
+
+local function test_unwait_writable()
+    gpoll.set_poller()
+
+    -- test that true if fd is unwait writable
+    local ok, err = gpoll.unwait_writable(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+
+    -- test that return only true
+    do_set_poller({
+        unwait_writable = function()
+            return true, 'this error is ignored'
+        end,
+    })
+    ok, err = gpoll.unwait_writable(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
+
+    -- test that return error
+    do_set_poller({
+        unwait_writable = function()
+            return false, 'unwait error'
+        end,
+    })
+    ok, err = gpoll.unwait_writable(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'unwait error')
+
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.unwait_writable, 'hello')
+    assert.match(err, 'fd must be uint')
+
+    -- test that throws an error if unwait_writable return false without error
+    do_set_poller({
+        unwait_writable = function()
+            return false
+        end,
+    })
+    err = assert.throws(gpoll.unwait_writable, TMPFD)
+    assert.match(err, 'unwait_writable .+ without an error', false)
 end
 
 local function test_unwait()
-    for _, fn in ipairs({
-        gpoll.unwait,
-        gpoll.unwait_readable,
-        gpoll.unwait_writable,
-    }) do
-        gpoll.set_poller()
+    gpoll.set_poller()
 
-        -- test that true if fd is unwait readable/writable
-        local ok, err = fn(TMPFD)
-        assert.is_false(ok)
-        assert.equal(err.type, errno.ENOTSUP)
+    -- test that true if fd is unwait readable/writable
+    local ok, err = gpoll.unwait(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
 
-        -- test that return true
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = function()
-                return true
-            end,
-            unwait_readable = function()
-                return true
-            end,
-            unwait_writable = function()
-                return true
-            end,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err = fn(TMPFD)
-        assert.is_true(ok)
-        assert.is_nil(err)
+    -- test that return only true
+    do_set_poller({
+        unwait = function()
+            return true, 'this error is ignored'
+        end,
+    })
+    ok, err = gpoll.unwait(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
 
-        -- test that return error
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = function()
-                return false, 'unwait error'
-            end,
-            unwait_readable = function()
-                return false, 'unwait error'
-            end,
-            unwait_writable = function()
-                return false, 'unwait error'
-            end,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err = fn(TMPFD)
-        assert.is_false(ok)
-        assert.match(err, 'unwait error')
+    -- test that return error
+    do_set_poller({
+        unwait = function()
+            return false, 'unwait error'
+        end,
+    })
+    ok, err = gpoll.unwait(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'unwait error')
 
-        -- test that throws an error if fd is invalid
-        err = assert.throws(fn, 'hello')
-        assert.match(err, 'fd must be uint')
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.unwait, 'hello')
+    assert.match(err, 'fd must be uint')
 
-        -- test that throws an error if wait_readable return false without error
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = function()
-                return false
-            end,
-            unwait_readable = function()
-                return false
-            end,
-            unwait_writable = function()
-                return false
-            end,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        err = assert.throws(fn, TMPFD)
-        assert.match(err, 'unwait.+ without an error', false)
-    end
+    -- test that throws an error if unwait return false without error
+    do_set_poller({
+        unwait = function()
+            return false
+        end,
+    })
+    err = assert.throws(gpoll.unwait, TMPFD)
+    assert.match(err, 'unwait .+ without an error', false)
 end
 
-local function test_lock()
-    for _, fn in ipairs({
-        gpoll.read_lock,
-        gpoll.write_lock,
-    }) do
-        gpoll.set_poller()
+local function test_read_lock()
+    gpoll.set_poller()
 
-        -- test that true if fd is read_lock/write_lock
-        local ok, err, timeout = fn(TMPFD)
-        assert.is_false(ok)
-        assert.equal(err.type, errno.ENOTSUP)
-        assert.is_nil(timeout)
+    -- test that true if fd is read_lock
+    local ok, err, timeout = gpoll.read_lock(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+    assert.is_nil(timeout)
 
-        -- test that return true
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = function()
-                return true
-            end,
-            write_lock = function()
-                return true
-            end,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err, timeout = fn(TMPFD)
-        assert.is_true(ok)
-        assert.is_nil(err)
-        assert.is_nil(timeout)
+    -- test that return only true
+    do_set_poller({
+        read_lock = function()
+            return true, 'this error is ignored', true
+        end,
+    })
+    ok, err, timeout = gpoll.read_lock(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
 
-        -- test that return error
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = function()
-                return false, 'lock error'
-            end,
-            write_lock = function()
-                return false, 'lock error'
-            end,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err, timeout = fn(TMPFD)
-        assert.is_false(ok)
-        assert.match(err, 'lock error')
-        assert.is_nil(timeout)
+    -- test that return error and timeout
+    do_set_poller({
+        read_lock = function()
+            return false, 'lock error', true
+        end,
+    })
+    ok, err, timeout = gpoll.read_lock(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'lock error')
+    assert.is_true(timeout)
 
-        -- test that return timeout
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = function()
-                return false, nil, true
-            end,
-            write_lock = function()
-                return false, nil, true
-            end,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err, timeout = fn(TMPFD)
-        assert.is_false(ok)
-        assert.is_nil(err)
-        assert.is_true(timeout)
+    -- test that return timeout
+    do_set_poller({
+        read_lock = function()
+            return false, nil, true
+        end,
+    })
+    ok, err, timeout = gpoll.read_lock(TMPFD)
+    assert.is_false(ok)
+    assert.is_nil(err)
+    assert.is_true(timeout)
 
-        -- test that throws an error if fd is invalid
-        err = assert.throws(fn, 'hello')
-        assert.match(err, 'fd must be uint')
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.read_lock, 'hello')
+    assert.match(err, 'fd must be uint')
 
-        -- test that throws an error if msec is invalid
-        err = assert.throws(fn, TMPFD, 'hello')
-        assert.match(err, 'msec must be uint')
+    -- test that throws an error if msec is invalid
+    err = assert.throws(gpoll.read_lock, TMPFD, 'hello')
+    assert.match(err, 'msec must be uint')
 
-        -- test that throws an error if wait_readable return false with neither error nor timeout
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = function()
-                return false
-            end,
-            write_lock = function()
-                return false
-            end,
-            read_unlock = NOOP,
-            write_unlock = NOOP,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        err = assert.throws(fn, TMPFD)
-        assert.match(err, '_lock.+ neither error nor timeout', false)
-    end
+    -- test that throws an error if read_lock return false with neither error nor timeout
+    do_set_poller({
+        read_lock = function()
+            return false
+        end,
+    })
+    err = assert.throws(gpoll.read_lock, TMPFD)
+    assert.match(err, 'read_lock .+ neither error nor timeout', false)
 end
 
-local function test_unlock()
-    for _, fn in ipairs({
-        gpoll.read_unlock,
-        gpoll.write_unlock,
-    }) do
-        gpoll.set_poller()
+local function test_write_lock()
+    gpoll.set_poller()
 
-        -- test that true if fd is read_unlock/write_unlock
-        local ok, err = fn(TMPFD)
-        assert.is_false(ok)
-        assert.equal(err.type, errno.ENOTSUP)
+    -- test that true if fd is write_lock
+    local ok, err, timeout = gpoll.write_lock(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+    assert.is_nil(timeout)
 
-        -- test that return true
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = function()
-                return true
-            end,
-            write_unlock = function()
-                return true
-            end,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err = fn(TMPFD)
-        assert.is_true(ok)
-        assert.is_nil(err)
+    -- test that return only true
+    do_set_poller({
+        write_lock = function()
+            return true, 'this error is ignored', true
+        end,
+    })
+    ok, err, timeout = gpoll.write_lock(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
 
-        -- test that return error
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = function()
-                return false, 'unlock error'
-            end,
-            write_unlock = function()
-                return false, 'unlock error'
-            end,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        ok, err = fn(TMPFD)
-        assert.is_false(ok)
-        assert.match(err, 'unlock error')
+    -- test that return error and timeout
+    do_set_poller({
+        write_lock = function()
+            return false, 'lock error', true
+        end,
+    })
+    ok, err, timeout = gpoll.write_lock(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'lock error')
+    assert.is_true(timeout)
 
-        -- test that throws an error if fd is invalid
-        err = assert.throws(fn, 'hello')
-        assert.match(err, 'fd must be uint')
+    -- test that return timeout
+    do_set_poller({
+        write_lock = function()
+            return false, nil, true
+        end,
+    })
+    ok, err, timeout = gpoll.write_lock(TMPFD)
+    assert.is_false(ok)
+    assert.is_nil(err)
+    assert.is_true(timeout)
 
-        -- test that throws an error if wait_readable return false without error
-        gpoll.set_poller({
-            pollable = NOOP,
-            later = NOOP,
-            wait_readable = NOOP,
-            wait_writable = NOOP,
-            unwait = NOOP,
-            unwait_readable = NOOP,
-            unwait_writable = NOOP,
-            read_lock = NOOP,
-            write_lock = NOOP,
-            read_unlock = function()
-                return false
-            end,
-            write_unlock = function()
-                return false
-            end,
-            sleep = NOOP,
-            sigwait = NOOP,
-        })
-        err = assert.throws(fn, TMPFD)
-        assert.match(err, '_unlock.+ without an error', false)
-    end
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.write_lock, 'hello')
+    assert.match(err, 'fd must be uint')
+
+    -- test that throws an error if msec is invalid
+    err = assert.throws(gpoll.write_lock, TMPFD, 'hello')
+    assert.match(err, 'msec must be uint')
+
+    -- test that throws an error if write_lock return false with neither error nor timeout
+    do_set_poller({
+        write_lock = function()
+            return false
+        end,
+    })
+    err = assert.throws(gpoll.write_lock, TMPFD)
+    assert.match(err, 'write_lock .+ neither error nor timeout', false)
+end
+
+local function test_read_unlock()
+    gpoll.set_poller()
+    -- test that true if fd is read_unlock
+    local ok, err = gpoll.read_unlock(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+
+    -- test that return only true
+    do_set_poller({
+        read_unlock = function()
+            return true, 'this error is ignored'
+        end,
+    })
+    ok, err = gpoll.read_unlock(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
+
+    -- test that return error
+    do_set_poller({
+        read_unlock = function()
+            return false, 'unlock error'
+        end,
+    })
+    ok, err = gpoll.read_unlock(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'unlock error')
+
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.read_unlock, 'hello')
+    assert.match(err, 'fd must be uint')
+
+    -- test that throws an error if read_unlock return false without error
+    do_set_poller({
+        read_unlock = function()
+            return false
+        end,
+    })
+    err = assert.throws(gpoll.read_unlock, TMPFD)
+    assert.match(err, 'read_unlock .+ without an error', false)
+end
+
+local function test_write_unlock()
+    gpoll.set_poller()
+
+    -- test that true if fd is write_unlock
+    local ok, err = gpoll.write_unlock(TMPFD)
+    assert.is_false(ok)
+    assert.equal(err.type, errno.ENOTSUP)
+
+    -- test that return only true
+    do_set_poller({
+        write_unlock = function()
+            return true, 'this error is ignored'
+        end,
+    })
+    ok, err = gpoll.write_unlock(TMPFD)
+    assert.is_true(ok)
+    assert.is_nil(err)
+
+    -- test that return error
+    do_set_poller({
+        write_unlock = function()
+            return false, 'unlock error'
+        end,
+    })
+    ok, err = gpoll.write_unlock(TMPFD)
+    assert.is_false(ok)
+    assert.match(err, 'unlock error')
+
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.write_unlock, 'hello')
+    assert.match(err, 'fd must be uint')
+
+    -- test that throws an error if write_lock return false without error
+    do_set_poller({
+        write_unlock = function()
+            return false
+        end,
+    })
+    err = assert.throws(gpoll.write_unlock, TMPFD)
+    assert.match(err, 'write_unlock .+ without an error', false)
 end
 
 local function test_sleep()
@@ -570,44 +625,20 @@ local function test_sleep()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that set custome sleep function
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
+    do_set_poller({
         sleep = function()
             return 2
         end,
-        sigwait = NOOP,
     })
     rem, err = gpoll.sleep(1)
     assert.equal(rem, 2)
     assert.is_nil(err)
 
     -- test that return error
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
+    do_set_poller({
         sleep = function()
             return nil, 'sleep error'
         end,
-        sigwait = NOOP,
     })
     rem, err = gpoll.sleep(1)
     assert.is_nil(rem)
@@ -618,43 +649,19 @@ local function test_sleep()
     assert.match(err, 'msec must be uint')
 
     -- test that throws an error if sleep return non-uint value
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
+    do_set_poller({
         sleep = function()
             return math.huge
         end,
-        sigwait = NOOP,
     })
     err = assert.throws(gpoll.sleep, 1)
     assert.match(err, 'sleep returned non-uint value')
 
     -- test that throws an error if sleep return nil without an error
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
+    do_set_poller({
         sleep = function()
             return nil
         end,
-        sigwait = NOOP,
     })
     err = assert.throws(gpoll.sleep, 1)
     assert.match(err, 'sleep returned nil without an error')
@@ -680,22 +687,10 @@ local function test_sigwait()
     assert.is_nil(err)
     assert.is_true(timeout)
 
-    -- test that set custome sigwait function
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
-        sleep = NOOP,
+    -- test that return only true
+    do_set_poller({
         sigwait = function()
-            return 123
+            return 123, 'this error is ignored', true
         end,
     })
     signo, err, timeout = gpoll.sigwait(100, signal.SIGINT)
@@ -703,43 +698,19 @@ local function test_sigwait()
     assert.is_nil(err)
     assert.is_nil(timeout)
 
-    -- test that return error
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
-        sleep = NOOP,
+    -- test that return error and timeout
+    do_set_poller({
         sigwait = function()
-            return nil, 'sigwait error'
+            return nil, 'sigwait error', true
         end,
     })
     signo, err, timeout = gpoll.sigwait(100)
     assert.is_nil(signo)
     assert.match(err, 'sigwait error')
-    assert.is_nil(timeout)
+    assert.is_true(timeout)
 
     -- test that return timeout
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
-        sleep = NOOP,
+    do_set_poller({
         sigwait = function()
             return nil, nil, true
         end,
@@ -754,19 +725,7 @@ local function test_sigwait()
     assert.match(err, 'msec must be uint')
 
     -- test that throws an error if sigwait return non-int value
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
-        sleep = NOOP,
+    do_set_poller({
         sigwait = function()
             return math.huge
         end,
@@ -775,19 +734,7 @@ local function test_sigwait()
     assert.match(err, 'sigwait returned non-int value')
 
     -- test that throws an error if sigwait return nil without an error
-    gpoll.set_poller({
-        pollable = NOOP,
-        later = NOOP,
-        wait_readable = NOOP,
-        wait_writable = NOOP,
-        unwait = NOOP,
-        unwait_readable = NOOP,
-        unwait_writable = NOOP,
-        read_lock = NOOP,
-        write_lock = NOOP,
-        read_unlock = NOOP,
-        write_unlock = NOOP,
-        sleep = NOOP,
+    do_set_poller({
         sigwait = function()
             return nil
         end,
@@ -799,10 +746,15 @@ end
 for k, f in pairs({
     test_default = test_default,
     test_set_poller = test_set_poller,
-    test_wait = test_wait,
+    test_wait_readable = test_wait_readable,
+    test_wait_writable = test_wait_writable,
+    test_unwait_readable = test_unwait_readable,
+    test_unwait_writable = test_unwait_writable,
     test_unwait = test_unwait,
-    test_lock = test_lock,
-    test_unlock = test_unlock,
+    test_read_lock = test_read_lock,
+    test_write_lock = test_write_lock,
+    test_read_unlock = test_read_unlock,
+    test_write_unlock = test_write_unlock,
     test_sleep = test_sleep,
     test_sigwait = test_sigwait,
 }) do
