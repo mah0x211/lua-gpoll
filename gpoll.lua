@@ -19,12 +19,27 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 --
+-- assign to local
+local type = type
+local rawequal = rawequal
+local floor = math.floor
+local format = string.format
 local toerror = require('error').toerror
 local new_errno = require('errno').new
-local isa = require('isa')
-local is_int = isa.int
-local is_uint = isa.uint
-local is_function = isa.Function
+
+local INF_POS = math.huge
+local INF_NEG = -INF_POS
+
+-- integer
+local function is_int(x)
+    return type(x) == 'number' and (x < INF_POS and x > INF_NEG) and
+               rawequal(floor(x), x)
+end
+
+local function is_uint(x)
+    return type(x) == 'number' and (x < INF_POS and x >= 0) and
+               rawequal(floor(x), x)
+end
 
 --- @class Poller
 local DEFAULT_POLLER = {}
@@ -200,10 +215,6 @@ local UNLOCKFN = {
 local SLEEPFN = DEFAULT_POLLER.sleep
 local SIGWAITFN = DEFAULT_POLLER.sigwait
 
--- assign to local
-local type = type
-local format = string.format
-
 --- set_poller replace the internal polling functions
 --- @param poller? Poller
 local function set_poller(poller)
@@ -294,7 +305,7 @@ local function do_wait(fname, fd, msec, hookfn, ctx)
 
     -- call hook function before wait
     if hookfn then
-        if not is_function(hookfn) then
+        if type(hookfn) ~= 'function' then
             error('hookfn must be function', 2)
         end
 
@@ -578,7 +589,7 @@ local function wait_event(evid, msec, hookfn, ctx)
 
     -- call hook function before wait
     if hookfn ~= nil then
-        if not is_function(hookfn) then
+        if type(hookfn) ~= 'function' then
             error('hookfn must be function', 2)
         end
 
