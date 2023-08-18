@@ -2,18 +2,6 @@ require('luacov')
 local assert = require('assert')
 local errno = require('errno')
 local gpoll = require('gpoll')
-local DEFAULT_FUNCS = {}
-for name, fn in pairs(gpoll) do
-    DEFAULT_FUNCS[name] = fn
-end
-
-local function do_set_poller(funcs)
-    local new_funcs = {}
-    for name, fn in pairs(DEFAULT_FUNCS) do
-        new_funcs[name] = funcs[name] or fn
-    end
-    gpoll.set_poller(new_funcs)
-end
 
 local function test_default()
     -- test that default returns
@@ -80,7 +68,7 @@ end
 
 local function test_set_poller()
     -- test that set custom poller
-    do_set_poller({
+    gpoll.set_poller({
         pollable = function()
             return true
         end,
@@ -147,7 +135,7 @@ local function test_wait_readable()
     assert.is_true(timeout)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         wait_readable = function()
             return true, 'this error is ignored', true
         end,
@@ -158,7 +146,7 @@ local function test_wait_readable()
     assert.is_nil(timeout)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         wait_readable = function()
             return false, 'wait error', true
         end,
@@ -169,7 +157,7 @@ local function test_wait_readable()
     assert.is_true(timeout)
 
     -- test that return timeout
-    do_set_poller({
+    gpoll.set_poller({
         wait_readable = function()
             return false, nil, true
         end,
@@ -198,7 +186,7 @@ local function test_wait_readable()
     assert.match(err, 'hookfn .+ neither error nor timeout', false)
 
     -- test that throws an error if wait_readable return false with neither error nor timeout
-    do_set_poller({
+    gpoll.set_poller({
         wait_readable = function()
             return false
         end,
@@ -244,7 +232,7 @@ local function test_wait_writable()
     assert.is_true(timeout)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         wait_writable = function()
             return true, 'this error is ignored', true
         end,
@@ -255,7 +243,7 @@ local function test_wait_writable()
     assert.is_nil(timeout)
 
     -- test that return error and timeout
-    do_set_poller({
+    gpoll.set_poller({
         wait_writable = function()
             return false, 'wait error', true
         end,
@@ -266,7 +254,7 @@ local function test_wait_writable()
     assert.is_true(timeout)
 
     -- test that return timeout
-    do_set_poller({
+    gpoll.set_poller({
         wait_writable = function()
             return false, nil, true
         end,
@@ -295,7 +283,7 @@ local function test_wait_writable()
     assert.match(err, 'hookfn .+ neither error nor timeout', false)
 
     -- test that throws an error if wait_writable return false with neither error nor timeout
-    do_set_poller({
+    gpoll.set_poller({
         wait_writable = function()
             return false
         end,
@@ -313,7 +301,7 @@ local function test_unwait_readable()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         unwait_readable = function()
             return true, 'this error is ignored'
         end,
@@ -323,7 +311,7 @@ local function test_unwait_readable()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         unwait_readable = function()
             return false, 'unwait error'
         end,
@@ -337,7 +325,7 @@ local function test_unwait_readable()
     assert.match(err, 'fd must be uint')
 
     -- test that throws an error if unwait_readable return false without error
-    do_set_poller({
+    gpoll.set_poller({
         unwait_readable = function()
             return false
         end,
@@ -355,7 +343,7 @@ local function test_unwait_writable()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         unwait_writable = function()
             return true, 'this error is ignored'
         end,
@@ -365,7 +353,7 @@ local function test_unwait_writable()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         unwait_writable = function()
             return false, 'unwait error'
         end,
@@ -379,7 +367,7 @@ local function test_unwait_writable()
     assert.match(err, 'fd must be uint')
 
     -- test that throws an error if unwait_writable return false without error
-    do_set_poller({
+    gpoll.set_poller({
         unwait_writable = function()
             return false
         end,
@@ -397,7 +385,7 @@ local function test_unwait()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         unwait = function()
             return true, 'this error is ignored'
         end,
@@ -407,7 +395,7 @@ local function test_unwait()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         unwait = function()
             return false, 'unwait error'
         end,
@@ -421,7 +409,7 @@ local function test_unwait()
     assert.match(err, 'fd must be uint')
 
     -- test that throws an error if unwait return false without error
-    do_set_poller({
+    gpoll.set_poller({
         unwait = function()
             return false
         end,
@@ -440,7 +428,7 @@ local function test_read_lock()
     assert.is_nil(timeout)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         read_lock = function()
             return true, 'this error is ignored', true
         end,
@@ -451,7 +439,7 @@ local function test_read_lock()
     assert.is_nil(timeout)
 
     -- test that return error and timeout
-    do_set_poller({
+    gpoll.set_poller({
         read_lock = function()
             return false, 'lock error', true
         end,
@@ -462,7 +450,7 @@ local function test_read_lock()
     assert.is_true(timeout)
 
     -- test that return timeout
-    do_set_poller({
+    gpoll.set_poller({
         read_lock = function()
             return false, nil, true
         end,
@@ -481,7 +469,7 @@ local function test_read_lock()
     assert.match(err, 'msec must be uint')
 
     -- test that throws an error if read_lock return false with neither error nor timeout
-    do_set_poller({
+    gpoll.set_poller({
         read_lock = function()
             return false
         end,
@@ -500,7 +488,7 @@ local function test_write_lock()
     assert.is_nil(timeout)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         write_lock = function()
             return true, 'this error is ignored', true
         end,
@@ -511,7 +499,7 @@ local function test_write_lock()
     assert.is_nil(timeout)
 
     -- test that return error and timeout
-    do_set_poller({
+    gpoll.set_poller({
         write_lock = function()
             return false, 'lock error', true
         end,
@@ -522,7 +510,7 @@ local function test_write_lock()
     assert.is_true(timeout)
 
     -- test that return timeout
-    do_set_poller({
+    gpoll.set_poller({
         write_lock = function()
             return false, nil, true
         end,
@@ -541,7 +529,7 @@ local function test_write_lock()
     assert.match(err, 'msec must be uint')
 
     -- test that throws an error if write_lock return false with neither error nor timeout
-    do_set_poller({
+    gpoll.set_poller({
         write_lock = function()
             return false
         end,
@@ -558,7 +546,7 @@ local function test_read_unlock()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         read_unlock = function()
             return true, 'this error is ignored'
         end,
@@ -568,7 +556,7 @@ local function test_read_unlock()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         read_unlock = function()
             return false, 'unlock error'
         end,
@@ -582,7 +570,7 @@ local function test_read_unlock()
     assert.match(err, 'fd must be uint')
 
     -- test that throws an error if read_unlock return false without error
-    do_set_poller({
+    gpoll.set_poller({
         read_unlock = function()
             return false
         end,
@@ -600,7 +588,7 @@ local function test_write_unlock()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         write_unlock = function()
             return true, 'this error is ignored'
         end,
@@ -610,7 +598,7 @@ local function test_write_unlock()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         write_unlock = function()
             return false, 'unlock error'
         end,
@@ -624,7 +612,7 @@ local function test_write_unlock()
     assert.match(err, 'fd must be uint')
 
     -- test that throws an error if write_lock return false without error
-    do_set_poller({
+    gpoll.set_poller({
         write_unlock = function()
             return false
         end,
@@ -640,7 +628,7 @@ local function test_sleep()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that set custome sleep function
-    do_set_poller({
+    gpoll.set_poller({
         sleep = function()
             return 2
         end,
@@ -650,7 +638,7 @@ local function test_sleep()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         sleep = function()
             return nil, 'sleep error'
         end,
@@ -664,7 +652,7 @@ local function test_sleep()
     assert.match(err, 'msec must be uint')
 
     -- test that throws an error if sleep return non-uint value
-    do_set_poller({
+    gpoll.set_poller({
         sleep = function()
             return math.huge
         end,
@@ -673,7 +661,7 @@ local function test_sleep()
     assert.match(err, 'sleep returned non-uint value')
 
     -- test that throws an error if sleep return nil without an error
-    do_set_poller({
+    gpoll.set_poller({
         sleep = function()
             return nil
         end,
@@ -690,7 +678,7 @@ local function test_sigwait()
     assert.is_nil(timeout)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         sigwait = function()
             return 456, 'this error is ignored', true
         end,
@@ -701,7 +689,7 @@ local function test_sigwait()
     assert.is_nil(timeout)
 
     -- test that return error and timeout
-    do_set_poller({
+    gpoll.set_poller({
         sigwait = function()
             return nil, 'sigwait error', true
         end,
@@ -712,7 +700,7 @@ local function test_sigwait()
     assert.is_true(timeout)
 
     -- test that return timeout
-    do_set_poller({
+    gpoll.set_poller({
         sigwait = function()
             return nil, nil, true
         end,
@@ -727,7 +715,7 @@ local function test_sigwait()
     assert.match(err, 'msec must be uint')
 
     -- test that throws an error if sigwait return non-int value
-    do_set_poller({
+    gpoll.set_poller({
         sigwait = function()
             return math.huge
         end,
@@ -736,7 +724,7 @@ local function test_sigwait()
     assert.match(err, 'sigwait returned non-int value')
 
     -- test that throws an error if sigwait return nil without an error
-    do_set_poller({
+    gpoll.set_poller({
         sigwait = function()
             return nil
         end,
@@ -754,7 +742,7 @@ local function test_readable_event()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that return only evid
-    do_set_poller({
+    gpoll.set_poller({
         new_readable_event = function()
             return 123, 'this error is ignored'
         end,
@@ -764,7 +752,7 @@ local function test_readable_event()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         new_readable_event = function()
             return nil, 'new event error'
         end,
@@ -778,7 +766,7 @@ local function test_readable_event()
     assert.match(err, 'fd must be uint')
 
     -- test that throws an error if it return nil with no error
-    do_set_poller({
+    gpoll.set_poller({
         new_readable_event = function()
             return nil
         end,
@@ -796,7 +784,7 @@ local function test_writable_event()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that return only evid
-    do_set_poller({
+    gpoll.set_poller({
         new_writable_event = function()
             return 123, 'this error is ignored'
         end,
@@ -806,7 +794,7 @@ local function test_writable_event()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         new_writable_event = function()
             return nil, 'new event error'
         end,
@@ -820,7 +808,7 @@ local function test_writable_event()
     assert.match(err, 'fd must be uint')
 
     -- test that throws an error if it return nil with no error
-    do_set_poller({
+    gpoll.set_poller({
         new_writable_event = function()
             return nil
         end,
@@ -838,7 +826,7 @@ local function test_dispose_event()
     assert.equal(err.type, errno.ENOTSUP)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         dispose_event = function()
             return true, 'this error is ignored'
         end,
@@ -848,7 +836,7 @@ local function test_dispose_event()
     assert.is_nil(err)
 
     -- test that return error
-    do_set_poller({
+    gpoll.set_poller({
         dispose_event = function()
             return nil, 'dispose error'
         end,
@@ -862,7 +850,7 @@ local function test_dispose_event()
     assert.match(err, 'evid must not be nil')
 
     -- test that throws an error if it return nil with no error
-    do_set_poller({
+    gpoll.set_poller({
         dispose_event = function()
             return nil
         end,
@@ -908,7 +896,7 @@ local function test_wait_event()
     assert.is_true(timeout)
 
     -- test that return only true
-    do_set_poller({
+    gpoll.set_poller({
         wait_event = function()
             return true, 'this error is ignored', true
         end,
@@ -919,7 +907,7 @@ local function test_wait_event()
     assert.is_nil(timeout)
 
     -- test that return error and timeout
-    do_set_poller({
+    gpoll.set_poller({
         wait_event = function()
             return false, 'wait error', true
         end,
@@ -930,7 +918,7 @@ local function test_wait_event()
     assert.is_true(timeout)
 
     -- test that return timeout
-    do_set_poller({
+    gpoll.set_poller({
         wait_event = function()
             return false, nil, true
         end,
@@ -959,7 +947,7 @@ local function test_wait_event()
     assert.match(err, 'hookfn .+ neither error nor timeout', false)
 
     -- test that throws an error if wait_event return false with neither error nor timeout
-    do_set_poller({
+    gpoll.set_poller({
         wait_event = function()
             return false
         end,

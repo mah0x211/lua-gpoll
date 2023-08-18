@@ -189,102 +189,41 @@ function DEFAULT_POLLER.pollable()
     return false
 end
 
-local POLLABLEFN = DEFAULT_POLLER.pollable
-local LATERFN = DEFAULT_POLLER.later
-local NEW_READABLE_EVENTFN = DEFAULT_POLLER.new_readable_event
-local NEW_WRITABLE_EVENTFN = DEFAULT_POLLER.new_writable_event
-local WAIT_EVENTFN = DEFAULT_POLLER.wait_event
-local DISPOSE_EVENTFN = DEFAULT_POLLER.dispose_event
-local WAITFN = {
-    wait_readable = DEFAULT_POLLER.wait_readable,
-    wait_writable = DEFAULT_POLLER.wait_writable,
-}
-local UNWAITFN = {
-    unwait = DEFAULT_POLLER.unwait,
-    unwait_readable = DEFAULT_POLLER.unwait_readable,
-    unwait_writable = DEFAULT_POLLER.unwait_writable,
-}
-local LOCKFN = {
-    read_lock = DEFAULT_POLLER.read_lock,
-    write_lock = DEFAULT_POLLER.write_lock,
-}
-local UNLOCKFN = {
-    read_unlock = DEFAULT_POLLER.read_unlock,
-    write_unlock = DEFAULT_POLLER.write_unlock,
-}
-local SLEEPFN = DEFAULT_POLLER.sleep
-local SIGWAITFN = DEFAULT_POLLER.sigwait
+local Poller = DEFAULT_POLLER
 
 --- set_poller replace the internal polling functions
 --- @param poller? Poller
 local function set_poller(poller)
+    local newpoller
     if poller == nil then
-        poller = DEFAULT_POLLER
+        newpoller = DEFAULT_POLLER
     else
-        for _, k in ipairs({
-            'pollable',
-            'later',
-            'new_readable_event',
-            'new_writable_event',
-            'wait_event',
-            'dispose_event',
-            'wait_readable',
-            'unwait_readable',
-            'wait_writable',
-            'unwait_writable',
-            'unwait',
-            'read_lock',
-            'read_unlock',
-            'write_lock',
-            'write_unlock',
-            'sleep',
-            'sigwait',
-        }) do
-            local f = poller[k]
-            if type(f) ~= 'function' then
-                error(format('%q is not function: %q', k, type(f)), 2)
+        newpoller = {}
+        for fname, default_func in pairs(DEFAULT_POLLER) do
+            local func = poller[fname]
+            if func == nil then
+                func = default_func
+            elseif type(func) ~= 'function' then
+                error(format('%q is not function: %q', fname, type(func)), 2)
             end
+            newpoller[fname] = func
         end
     end
 
-    --- replace poll functions
-    POLLABLEFN = poller.pollable
-    LATERFN = poller.later
-    NEW_READABLE_EVENTFN = poller.new_readable_event
-    NEW_WRITABLE_EVENTFN = poller.new_writable_event
-    WAIT_EVENTFN = poller.wait_event
-    DISPOSE_EVENTFN = poller.dispose_event
-    WAITFN = {
-        wait_readable = poller.wait_readable,
-        wait_writable = poller.wait_writable,
-    }
-    UNWAITFN = {
-        unwait = poller.unwait,
-        unwait_readable = poller.unwait_readable,
-        unwait_writable = poller.unwait_writable,
-    }
-    LOCKFN = {
-        read_lock = poller.read_lock,
-        write_lock = poller.write_lock,
-    }
-    UNLOCKFN = {
-        read_unlock = poller.read_unlock,
-        write_unlock = poller.write_unlock,
-    }
-    SLEEPFN = poller.sleep
-    SIGWAITFN = poller.sigwait
+    -- set new poller
+    Poller = newpoller
 end
 
 --- pollable
 --- @return boolean ok
 local function pollable()
-    return POLLABLEFN()
+    return Poller.pollable()
 end
 
 --- later
 --- @return boolean ok
 local function later()
-    return LATERFN()
+    return Poller.later()
 end
 
 --- do_wait
@@ -320,7 +259,7 @@ local function do_wait(fname, fd, msec, hookfn, ctx)
         end
     end
 
-    local ok, err, timeout = WAITFN[fname](fd, msec)
+    local ok, err, timeout = Poller[fname](fd, msec)
     if ok then
         return true
     elseif err then
@@ -341,7 +280,7 @@ local function do_unwait(fname, fd)
         error('fd must be uint', 2)
     end
 
-    local ok, err = UNWAITFN[fname](fd)
+    local ok, err = Poller[fname](fd)
     if ok then
         return true
     elseif err then
@@ -364,7 +303,7 @@ local function do_lock(fname, fd, msec)
         error('msec must be uint', 2)
     end
 
-    local ok, err, timeout = LOCKFN[fname](fd, msec)
+    local ok, err, timeout = Poller[fname](fd, msec)
     if ok then
         return true
     elseif err then
@@ -385,7 +324,7 @@ local function do_unlock(fname, fd)
         error('fd must be uint', 2)
     end
 
-    local ok, err = UNLOCKFN[fname](fd)
+    local ok, err = Poller[fname](fd)
     if ok then
         return true
     elseif err == nil then
@@ -481,7 +420,7 @@ local function sleep(msec)
         error('msec must be uint', 2)
     end
 
-    local rem, err = SLEEPFN(msec)
+    local rem, err = Poller.sleep(msec)
     if rem then
         if not is_uint(rem) then
             error('sleep returned non-uint value')
@@ -504,7 +443,7 @@ local function sigwait(msec, ...)
         error('msec must be uint', 2)
     end
 
-    local signo, err, timeout = SIGWAITFN(msec, ...)
+    local signo, err, timeout = Poller.sigwait(msec, ...)
     if signo then
         if not is_int(signo) then
             error('sigwait returned non-int value')
@@ -527,7 +466,7 @@ local function new_readable_event(fd)
         error('fd must be uint', 2)
     end
 
-    local evid, err = NEW_READABLE_EVENTFN(fd)
+    local evid, err = Poller.new_readable_event(fd)
     if evid ~= nil then
         return evid
     elseif err then
@@ -545,7 +484,7 @@ local function new_writable_event(fd)
         error('fd must be uint', 2)
     end
 
-    local evid, err = NEW_WRITABLE_EVENTFN(fd)
+    local evid, err = Poller.new_writable_event(fd)
     if evid ~= nil then
         return evid
     elseif err then
@@ -563,7 +502,7 @@ local function dispose_event(evid)
         error('evid must not be nil', 2)
     end
 
-    local ok, err = DISPOSE_EVENTFN(evid)
+    local ok, err = Poller.dispose_event(evid)
     if ok then
         return true
     elseif err then
@@ -604,7 +543,7 @@ local function wait_event(evid, msec, hookfn, ctx)
         end
     end
 
-    local ok, err, timeout = WAIT_EVENTFN(evid, msec)
+    local ok, err, timeout = Poller.wait_event(evid, msec)
     if ok then
         return true
     elseif err then
