@@ -252,7 +252,7 @@ local function do_unwait(fname, fd)
     elseif err then
         return false, toerror(err)
     end
-    error(fname .. ' returned false|nil without an error')
+    return false
 end
 
 --- do_lock waits until a lock is acquired

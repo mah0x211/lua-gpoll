@@ -299,18 +299,19 @@ local function test_unwait_readable()
     assert.is_false(ok)
     assert.match(err, 'unwait error')
 
-    -- test that throws an error if fd is invalid
-    err = assert.throws(gpoll.unwait_readable, 'hello')
-    assert.match(err, 'fd must be uint')
-
-    -- test that throws an error if unwait_readable return false without error
+    -- test that return false
     gpoll.set_poller({
         unwait_readable = function()
             return false
         end,
     })
-    err = assert.throws(gpoll.unwait_readable, 1)
-    assert.match(err, 'unwait_readable .+ without an error', false)
+    ok, err = gpoll.unwait_readable(1)
+    assert.is_false(ok)
+    assert.is_nil(err)
+
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.unwait_readable, 'hello')
+    assert.match(err, 'fd must be uint')
 end
 
 local function test_unwait_writable()
@@ -341,18 +342,19 @@ local function test_unwait_writable()
     assert.is_false(ok)
     assert.match(err, 'unwait error')
 
-    -- test that throws an error if fd is invalid
-    err = assert.throws(gpoll.unwait_writable, 'hello')
-    assert.match(err, 'fd must be uint')
-
-    -- test that throws an error if unwait_writable return false without error
+    -- test that return false
     gpoll.set_poller({
         unwait_writable = function()
             return false
         end,
     })
-    err = assert.throws(gpoll.unwait_writable, 1)
-    assert.match(err, 'unwait_writable .+ without an error', false)
+    ok, err = gpoll.unwait_writable(1)
+    assert.is_false(ok)
+    assert.is_nil(err)
+
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.unwait_writable, 'hello')
+    assert.match(err, 'fd must be uint')
 end
 
 local function test_unwait()
@@ -383,18 +385,19 @@ local function test_unwait()
     assert.is_false(ok)
     assert.match(err, 'unwait error')
 
-    -- test that throws an error if fd is invalid
-    err = assert.throws(gpoll.unwait, 'hello')
-    assert.match(err, 'fd must be uint')
-
-    -- test that throws an error if unwait return false without error
+    -- test that return false
     gpoll.set_poller({
         unwait = function()
             return false
         end,
     })
-    err = assert.throws(gpoll.unwait, 1)
-    assert.match(err, 'unwait .+ without an error', false)
+    ok, err = gpoll.unwait(1)
+    assert.is_false(ok)
+    assert.is_nil(err)
+
+    -- test that throws an error if fd is invalid
+    err = assert.throws(gpoll.unwait, 'hello')
+    assert.match(err, 'fd must be uint')
 end
 
 local function test_read_lock()
