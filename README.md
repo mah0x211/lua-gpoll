@@ -58,14 +58,14 @@ execute the next line later.
 - `err:any`: error message.
 
 
-## ok, err, timeout = wait_readable( fd [, msec [, hook [, ctx]]] )
+## ok, err, timeout = wait_readable( fd [, sec [, hook [, ctx]]] )
 
 wait until the file descriptor is readable.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `msec:integer`: specify a msec `milliseconds` as unsigned integer.
+- `sec:number`: specify a sec `seconds` as unsigned number.
 - `hook:function`: a hook function that calls before polling a status of file descriptor.
 - `ctx:any`: any value for hook function.
 
@@ -76,14 +76,14 @@ wait until the file descriptor is readable.
 - `timeout:boolean`: `true` if operation has timed out.
 
 
-## ok, err, timeout = wait_writable( fd [, msec [, hook [, ctx]]] )
+## ok, err, timeout = wait_writable( fd [, sec [, hook [, ctx]]] )
 
 wait until the file descriptor is writable.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `msec:integer`: specify a msec `milliseconds` as unsigned integer.
+- `sec:number`: specify a sec `seconds` as unsigned number.
 - `hook:function`: a hook function that calls before polling a status of file descriptor.
 - `ctx:any`: any value for hook function.
 
@@ -136,14 +136,14 @@ cancels waiting for file descriptor to be readable/writable.
 - `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## ok, err, timeout = read_lock( fd [, msec] )
+## ok, err, timeout = read_lock( fd [, sec] )
 
 waits until a read lock is acquired.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `msec:integer`: a msec `milliseconds` as unsigned integer.
+- `sec:number`: a sec `seconds` as unsigned number.
 
 **Returns**
 
@@ -166,14 +166,14 @@ releases a read lock.
 - `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## ok, err, timeout = write_lock( fd [, msec] )
+## ok, err, timeout = write_lock( fd [, sec] )
 
 waits until a write lock is acquired.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `msec:integer`: a msec `milliseconds` as unsigned integer.
+- `sec:number`: a sec `seconds` as unsigned number.
 
 **Returns**
 
@@ -196,28 +196,28 @@ releases a write lock.
 - `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## rem, err = sleep( msec )
+## rem, err = sleep( sec )
 
-waits until `msec` seconds have elapsed.
+waits until `sec` seconds have elapsed.
 
 **Parameters**
 
-- `msec:integer`: specify a wait `milliseconds` as unsigned integer.
+- `sec:number`: specify a wait `seconds` as unsigned number.
 
 **Returns**
 
-- `rem:integer`: remaining milliseconds, or `nil` if an error occurs.
+- `rem:number`: remaining seconds, or `nil` if an error occurs.
 - `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## signo, err, timeout = sigwait( msec, signo, ... )
+## signo, err, timeout = sigwait( sec, signo, ... )
 
 waits for interrupt by the specified signals until the specified time.
 
 **Parameters**
 
-- `msec:integer`: specify a wait `milliseconds` as unsigned integer.
--- `signo:integer`: valid signal numbers.
+- `sec:number`: specify a wait `seconds` as unsigned number.
+- `signo:integer`: valid signal numbers.
 
 **Returns**
 

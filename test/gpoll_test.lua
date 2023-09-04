@@ -150,9 +150,9 @@ local function test_wait_readable()
     err = assert.throws(gpoll.wait_readable, 'hello')
     assert.match(err, 'fd must be uint')
 
-    -- test that throws an error if msec is invalid
+    -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.wait_readable, 1, 'hello')
-    assert.match(err, 'msec must be uint')
+    assert.match(err, 'sec must be unsigned number')
 
     -- test that throws an error if hookfn is invalid
     err = assert.throws(gpoll.wait_readable, 1, nil, {})
@@ -247,9 +247,9 @@ local function test_wait_writable()
     err = assert.throws(gpoll.wait_writable, 'hello')
     assert.match(err, 'fd must be uint')
 
-    -- test that throws an error if msec is invalid
+    -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.wait_writable, 1, 'hello')
-    assert.match(err, 'msec must be uint')
+    assert.match(err, 'sec must be unsigned number')
 
     -- test that throws an error if hookfn is invalid
     err = assert.throws(gpoll.wait_writable, 1, nil, {})
@@ -446,9 +446,9 @@ local function test_read_lock()
     err = assert.throws(gpoll.read_lock, 'hello')
     assert.match(err, 'fd must be uint')
 
-    -- test that throws an error if msec is invalid
+    -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.read_lock, 1, 'hello')
-    assert.match(err, 'msec must be uint')
+    assert.match(err, 'sec must be unsigned number')
 
     -- test that throws an error if read_lock return false with neither error nor timeout
     gpoll.set_poller({
@@ -506,9 +506,9 @@ local function test_write_lock()
     err = assert.throws(gpoll.write_lock, 'hello')
     assert.match(err, 'fd must be uint')
 
-    -- test that throws an error if msec is invalid
+    -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.write_lock, 1, 'hello')
-    assert.match(err, 'msec must be uint')
+    assert.match(err, 'sec must be unsigned number')
 
     -- test that throws an error if write_lock return false with neither error nor timeout
     gpoll.set_poller({
@@ -629,18 +629,18 @@ local function test_sleep()
     assert.is_nil(rem)
     assert.match(err, 'sleep error')
 
-    -- test that throws an error if msec is invalid
+    -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.sleep, math.huge)
-    assert.match(err, 'msec must be uint')
+    assert.match(err, 'sec must be unsigned number')
 
-    -- test that throws an error if sleep return non-uint value
+    -- test that throws an error if sleep return non-unsigned value
     gpoll.set_poller({
         sleep = function()
             return math.huge
         end,
     })
     err = assert.throws(gpoll.sleep, 1)
-    assert.match(err, 'sleep returned non-uint value')
+    assert.match(err, 'sleep returned non-unsigned value')
 
     -- test that throws an error if sleep return nil without an error
     gpoll.set_poller({
@@ -692,9 +692,9 @@ local function test_sigwait()
     assert.is_nil(err)
     assert.is_true(timeout)
 
-    -- test that throws an error if msec is invalid
+    -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.sigwait, math.huge)
-    assert.match(err, 'msec must be uint')
+    assert.match(err, 'sec must be unsigned number')
 
     -- test that throws an error if sigwait return non-int value
     gpoll.set_poller({
