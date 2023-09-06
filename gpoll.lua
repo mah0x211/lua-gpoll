@@ -30,15 +30,27 @@ local new_errno = require('errno').new
 local INF_POS = math.huge
 local INF_NEG = -INF_POS
 
--- integer
+--- is_int returns true if x is integer
+--- @param x number
+--- @return boolean
 local function is_int(x)
     return type(x) == 'number' and (x < INF_POS and x > INF_NEG) and
                rawequal(floor(x), x)
 end
 
+--- is_uint returns true if x is unsigned integer
+--- @param x number
+--- @return boolean
 local function is_uint(x)
     return type(x) == 'number' and (x < INF_POS and x >= 0) and
                rawequal(floor(x), x)
+end
+
+--- is_unsigned returns true if x is unsigned number
+--- @param x number
+--- @return boolean
+local function is_unsigned(x)
+    return type(x) == 'number' and (x < INF_POS and x >= 0)
 end
 
 --- @class Poller
@@ -46,21 +58,21 @@ local DEFAULT_POLLER = {}
 
 --- wait_readable
 --- @param fd integer
---- @param msec integer
+--- @param sec number
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.wait_readable(fd, msec)
+function DEFAULT_POLLER.wait_readable(fd, sec)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- wait_writable
 --- @param fd integer
---- @param msec integer
+--- @param sec number
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.wait_writable(fd, msec)
+function DEFAULT_POLLER.wait_writable(fd, sec)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
@@ -90,21 +102,21 @@ end
 
 --- read_lock
 --- @param fd integer
---- @param msec integer
+--- @param sec number
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.read_lock(fd, msec)
+function DEFAULT_POLLER.read_lock(fd, sec)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- write_lock
 --- @param fd integer
---- @param msec integer
+--- @param sec number
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.write_lock(fd, msec)
+function DEFAULT_POLLER.write_lock(fd, sec)
     return false, new_errno('ENOTSUP', 'not pollable')
 end
 
@@ -125,20 +137,20 @@ function DEFAULT_POLLER.write_unlock(fd)
 end
 
 --- sleep
---- @param msec integer
---- @return integer rem
+--- @param sec number
+--- @return number rem
 --- @return any err
-function DEFAULT_POLLER.sleep(msec)
+function DEFAULT_POLLER.sleep(sec)
     return nil, new_errno('ENOTSUP', 'not pollable')
 end
 
 --- sigwait
---- @param msec integer
+--- @param sec number
 --- @param ... integer signal-number
 --- @return integer? signo
 --- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.sigwait(msec, ...)
+function DEFAULT_POLLER.sigwait(sec, ...)
     return nil, new_errno('ENOTSUP', 'not pollable')
 end
 
@@ -195,17 +207,17 @@ end
 --- do_wait
 --- @param fname string
 --- @param fd integer
---- @param msec? integer
+--- @param sec? number
 --- @param hookfn? function
 --- @param ctx? any
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function do_wait(fname, fd, msec, hookfn, ctx)
+local function do_wait(fname, fd, sec, hookfn, ctx)
     if not is_uint(fd) then
         error('fd must be uint', 2)
-    elseif msec ~= nil and not is_uint(msec) then
-        error('msec must be uint', 2)
+    elseif sec ~= nil and not is_unsigned(sec) then
+        error('sec must be unsigned number', 2)
     end
 
     -- call hook function before wait
@@ -214,7 +226,7 @@ local function do_wait(fname, fd, msec, hookfn, ctx)
             error('hookfn must be function', 2)
         end
 
-        local ok, err, timeout = hookfn(ctx, msec)
+        local ok, err, timeout = hookfn(ctx, sec)
         if not ok then
             if err then
                 return false, toerror(err), timeout
@@ -225,7 +237,7 @@ local function do_wait(fname, fd, msec, hookfn, ctx)
         end
     end
 
-    local ok, err, timeout = Poller[fname](fd, msec)
+    local ok, err, timeout = Poller[fname](fd, sec)
     if ok then
         return true
     elseif err then
@@ -258,18 +270,18 @@ end
 --- do_lock waits until a lock is acquired
 --- @param fname string
 --- @param fd integer
---- @param msec? integer
+--- @param sec? number
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function do_lock(fname, fd, msec)
+local function do_lock(fname, fd, sec)
     if not is_uint(fd) then
         error('fd must be uint', 2)
-    elseif msec ~= nil and not is_uint(msec) then
-        error('msec must be uint', 2)
+    elseif sec ~= nil and not is_unsigned(sec) then
+        error('sec must be unsigned number', 2)
     end
 
-    local ok, err, timeout = Poller[fname](fd, msec)
+    local ok, err, timeout = Poller[fname](fd, sec)
     if ok then
         return true
     elseif err then
@@ -301,26 +313,26 @@ end
 
 --- wait_readable
 --- @param fd integer
---- @param msec? integer
+--- @param sec? integer
 --- @param hookfn? function
 --- @param ctx? any
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function wait_readable(fd, msec, hookfn, ctx)
-    return do_wait('wait_readable', fd, msec, hookfn, ctx)
+local function wait_readable(fd, sec, hookfn, ctx)
+    return do_wait('wait_readable', fd, sec, hookfn, ctx)
 end
 
 --- wait_writable
 --- @param fd integer
---- @param msec? integer
+--- @param sec? number
 --- @param hookfn? function
 --- @param ctx? any
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function wait_writable(fd, msec, hookfn, ctx)
-    return do_wait('wait_writable', fd, msec, hookfn, ctx)
+local function wait_writable(fd, sec, hookfn, ctx)
+    return do_wait('wait_writable', fd, sec, hookfn, ctx)
 end
 
 --- unwait
@@ -343,22 +355,22 @@ end
 
 --- read_lock waits until a read lock is acquired
 --- @param fd integer
---- @param msec? integer
+--- @param sec? number
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function read_lock(fd, msec)
-    return do_lock('read_lock', fd, msec)
+local function read_lock(fd, sec)
+    return do_lock('read_lock', fd, sec)
 end
 
 --- write_lock waits until a write lock is acquired
 --- @param fd integer
---- @param msec? integer
+--- @param sec? number
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function write_lock(fd, msec)
-    return do_lock('write_lock', fd, msec)
+local function write_lock(fd, sec)
+    return do_lock('write_lock', fd, sec)
 end
 
 --- read_unlock releases a read lock
@@ -378,18 +390,18 @@ local function write_unlock(fd)
 end
 
 --- sleep until timer time elapsed
---- @param msec number
+--- @param sec number
 --- @return number rem
 --- @return any err
-local function sleep(msec)
-    if not is_uint(msec) then
-        error('msec must be uint', 2)
+local function sleep(sec)
+    if not is_unsigned(sec) then
+        error('sec must be unsigned number', 2)
     end
 
-    local rem, err = Poller.sleep(msec)
+    local rem, err = Poller.sleep(sec)
     if rem then
-        if not is_uint(rem) then
-            error('sleep returned non-uint value')
+        if not is_unsigned(rem) then
+            error('sleep returned non-unsigned value')
         end
         return rem
     elseif err then
@@ -399,17 +411,17 @@ local function sleep(msec)
 end
 
 --- sigwait
---- @param msec integer
+--- @param sec number
 --- @param ... integer signal-number
 --- @return integer signo
 --- @return any err
 --- @return boolean? timeout
-local function sigwait(msec, ...)
-    if not is_uint(msec) then
-        error('msec must be uint', 2)
+local function sigwait(sec, ...)
+    if not is_unsigned(sec) then
+        error('sec must be unsigned number', 2)
     end
 
-    local signo, err, timeout = Poller.sigwait(msec, ...)
+    local signo, err, timeout = Poller.sigwait(sec, ...)
     if signo then
         if not is_int(signo) then
             error('sigwait returned non-int value')
