@@ -13,6 +13,7 @@ dependencies = {
     "lua >= 5.1",
     "errno >= 0.3.0",
     "io-wait >= 0.4.0",
+    "time-sleep >= 0.2.1",
 }
 build = {
     type = "builtin",
