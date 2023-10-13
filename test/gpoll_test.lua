@@ -86,33 +86,6 @@ local function test_wait_readable()
     assert.equal(err.type, errno.ENOTSUP)
     assert.is_nil(timeout)
 
-    -- test that hookfn is called before waiting for fd event
-    local called = false
-    ok, err, timeout = gpoll.wait_readable(1, nil, function()
-        called = true
-        return true
-    end)
-    assert.is_false(ok)
-    assert.equal(err.type, errno.ENOTSUP)
-    assert.is_nil(timeout)
-    assert.is_true(called)
-
-    -- test that return error from hookfn
-    ok, err, timeout = gpoll.wait_readable(1, nil, function()
-        return false, 'hook error', true
-    end)
-    assert.is_false(ok)
-    assert.match(err, 'hook error')
-    assert.is_true(timeout)
-
-    -- test that return timeout from hookfn
-    ok, err, timeout = gpoll.wait_readable(1, nil, function()
-        return false, nil, true
-    end)
-    assert.is_false(ok)
-    assert.is_nil(err)
-    assert.is_true(timeout)
-
     -- test that return only true
     gpoll.set_poller({
         wait_readable = function()
@@ -154,16 +127,6 @@ local function test_wait_readable()
     err = assert.throws(gpoll.wait_readable, 1, 'hello')
     assert.match(err, 'sec must be unsigned number')
 
-    -- test that throws an error if hookfn is invalid
-    err = assert.throws(gpoll.wait_readable, 1, nil, {})
-    assert.match(err, 'hookfn must be function')
-
-    -- test that throws an error if hookfn return false with neither error nor timeout
-    err = assert.throws(gpoll.wait_readable, 1, nil, function()
-        return false
-    end)
-    assert.match(err, 'hookfn .+ neither error nor timeout', false)
-
     -- test that throws an error if wait_readable return false with neither error nor timeout
     gpoll.set_poller({
         wait_readable = function()
@@ -182,33 +145,6 @@ local function test_wait_writable()
     assert.is_false(ok)
     assert.equal(err.type, errno.ENOTSUP)
     assert.is_nil(timeout)
-
-    -- test that hookfn is called before waiting for fd event
-    local called = false
-    ok, err, timeout = gpoll.wait_writable(1, nil, function()
-        called = true
-        return true
-    end)
-    assert.is_false(ok)
-    assert.equal(err.type, errno.ENOTSUP)
-    assert.is_nil(timeout)
-    assert.is_true(called)
-
-    -- test that return error from hookfn
-    ok, err, timeout = gpoll.wait_writable(1, nil, function()
-        return false, 'hook error'
-    end)
-    assert.is_false(ok)
-    assert.match(err, 'hook error')
-    assert.is_nil(timeout)
-
-    -- test that return timeout from hookfn
-    ok, err, timeout = gpoll.wait_writable(1, nil, function()
-        return false, nil, true
-    end)
-    assert.is_false(ok)
-    assert.is_nil(err)
-    assert.is_true(timeout)
 
     -- test that return only true
     gpoll.set_poller({
@@ -250,16 +186,6 @@ local function test_wait_writable()
     -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.wait_writable, 1, 'hello')
     assert.match(err, 'sec must be unsigned number')
-
-    -- test that throws an error if hookfn is invalid
-    err = assert.throws(gpoll.wait_writable, 1, nil, {})
-    assert.match(err, 'hookfn must be function')
-
-    -- test that throws an error if hookfn return false with neither error nor timeout
-    err = assert.throws(gpoll.wait_writable, 1, nil, function()
-        return false
-    end)
-    assert.match(err, 'hookfn .+ neither error nor timeout', false)
 
     -- test that throws an error if wait_writable return false with neither error nor timeout
     gpoll.set_poller({

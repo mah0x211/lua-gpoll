@@ -208,33 +208,14 @@ end
 --- @param fname string
 --- @param fd integer
 --- @param sec? number
---- @param hookfn? function
---- @param ctx? any
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function do_wait(fname, fd, sec, hookfn, ctx)
+local function do_wait(fname, fd, sec)
     if not is_uint(fd) then
         error('fd must be uint', 2)
     elseif sec ~= nil and not is_unsigned(sec) then
         error('sec must be unsigned number', 2)
-    end
-
-    -- call hook function before wait
-    if hookfn then
-        if type(hookfn) ~= 'function' then
-            error('hookfn must be function', 2)
-        end
-
-        local ok, err, timeout = hookfn(ctx, sec)
-        if not ok then
-            if err then
-                return false, toerror(err), timeout
-            elseif timeout then
-                return false, nil, true
-            end
-            error('hookfn returned false|nil with neither error nor timeout')
-        end
     end
 
     local ok, err, timeout = Poller[fname](fd, sec)
@@ -314,25 +295,21 @@ end
 --- wait_readable
 --- @param fd integer
 --- @param sec? integer
---- @param hookfn? function
---- @param ctx? any
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function wait_readable(fd, sec, hookfn, ctx)
-    return do_wait('wait_readable', fd, sec, hookfn, ctx)
+local function wait_readable(fd, sec)
+    return do_wait('wait_readable', fd, sec)
 end
 
 --- wait_writable
 --- @param fd integer
 --- @param sec? number
---- @param hookfn? function
---- @param ctx? any
 --- @return boolean ok
 --- @return any err
 --- @return boolean? timeout
-local function wait_writable(fd, sec, hookfn, ctx)
-    return do_wait('wait_writable', fd, sec, hookfn, ctx)
+local function wait_writable(fd, sec)
+    return do_wait('wait_writable', fd, sec)
 end
 
 --- unwait
