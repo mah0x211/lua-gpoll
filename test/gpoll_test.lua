@@ -3,6 +3,7 @@ local assert = require('assert')
 local errno = require('errno')
 local gpoll = require('gpoll')
 local pipe = require('os.pipe')
+local gettime = require('time.clock').gettime
 local FDR, FDW
 do
     local err
@@ -63,9 +64,9 @@ local function test_default()
 
     -- wait sleep
     local rem
-    rem, err = gpoll.sleep(100)
-    assert.is_nil(rem)
-    assert.equal(err.type, errno.ENOTSUP)
+    rem, err = gpoll.sleep(0.1)
+    assert.equal(rem, 0)
+    assert.is_nil(err)
 end
 
 local function test_set_poller()
@@ -581,10 +582,14 @@ local function test_write_unlock()
 end
 
 local function test_sleep()
-    -- test that sleep for 1 sec
-    local rem, err = gpoll.sleep(1000)
-    assert.is_nil(rem)
-    assert.equal(err.type, errno.ENOTSUP)
+    -- test that sleep for 1.5 sec
+    local t = gettime()
+    local rem, err = gpoll.sleep(1.5)
+    t = gettime() - t
+    assert.equal(rem, 0)
+    assert.is_nil(err)
+    assert.greater_or_equal(t, 1.5)
+    assert.less(t, 1.6)
 
     -- test that set custome sleep function
     gpoll.set_poller({

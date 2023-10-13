@@ -28,6 +28,7 @@ local toerror = require('error').toerror
 local new_errno = require('errno').new
 local io_wait_readable = require('io.wait').readable
 local io_wait_writable = require('io.wait').writable
+local time_sleep = require('time.sleep')
 
 local INF_POS = math.huge
 local INF_NEG = -INF_POS
@@ -146,7 +147,7 @@ end
 --- @return number rem
 --- @return any err
 function DEFAULT_POLLER.sleep(sec)
-    return nil, new_errno('ENOTSUP', 'not pollable')
+    return time_sleep(sec)
 end
 
 --- sigwait
