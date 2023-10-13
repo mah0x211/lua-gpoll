@@ -58,7 +58,7 @@ execute the next line later.
 - `err:any`: error message.
 
 
-## ok, err, timeout = wait_readable( fd [, sec [, hook [, ctx]]] )
+## ok, err, timeout = wait_readable( fd [, sec] )
 
 wait until the file descriptor is readable.
 
@@ -66,8 +66,6 @@ wait until the file descriptor is readable.
 
 - `fd:integer`: a file descriptor.
 - `sec:number`: specify a sec `seconds` as unsigned number.
-- `hook:function`: a hook function that calls before polling a status of file descriptor.
-- `ctx:any`: any value for hook function.
 
 **Returns**
 
@@ -76,7 +74,7 @@ wait until the file descriptor is readable.
 - `timeout:boolean`: `true` if operation has timed out.
 
 
-## ok, err, timeout = wait_writable( fd [, sec [, hook [, ctx]]] )
+## ok, err, timeout = wait_writable( fd [, sec] )
 
 wait until the file descriptor is writable.
 
@@ -84,8 +82,6 @@ wait until the file descriptor is writable.
 
 - `fd:integer`: a file descriptor.
 - `sec:number`: specify a sec `seconds` as unsigned number.
-- `hook:function`: a hook function that calls before polling a status of file descriptor.
-- `ctx:any`: any value for hook function.
 
 **Returns**
 
