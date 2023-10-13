@@ -29,6 +29,7 @@ local new_errno = require('errno').new
 local io_wait_readable = require('io.wait').readable
 local io_wait_writable = require('io.wait').writable
 local time_sleep = require('time.sleep')
+local signal_wait = require('signal').wait
 
 local INF_POS = math.huge
 local INF_NEG = -INF_POS
@@ -157,7 +158,7 @@ end
 --- @return any err
 --- @return boolean? timeout
 function DEFAULT_POLLER.sigwait(sec, ...)
-    return nil, new_errno('ENOTSUP', 'not pollable')
+    return signal_wait(sec, ...)
 end
 
 --- later
