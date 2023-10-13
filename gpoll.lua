@@ -26,6 +26,8 @@ local floor = math.floor
 local format = string.format
 local toerror = require('error').toerror
 local new_errno = require('errno').new
+local io_wait_readable = require('io.wait').readable
+local io_wait_writable = require('io.wait').writable
 
 local INF_POS = math.huge
 local INF_NEG = -INF_POS
@@ -59,21 +61,24 @@ local DEFAULT_POLLER = {}
 --- wait_readable
 --- @param fd integer
 --- @param sec number
---- @return boolean ok
+--- @param ... integer
+--- @return integer fd
 --- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.wait_readable(fd, sec)
-    return false, new_errno('ENOTSUP', 'not pollable')
+--- @return boolean? hup
+function DEFAULT_POLLER.wait_readable(fd, sec, ...)
+    return io_wait_readable(fd, sec, ...)
 end
 
 --- wait_writable
 --- @param fd integer
 --- @param sec number
---- @return boolean ok
+--- @param ... integer
+--- @return integer fd
 --- @return any err
 --- @return boolean? timeout
-function DEFAULT_POLLER.wait_writable(fd, sec)
-    return false, new_errno('ENOTSUP', 'not pollable')
+function DEFAULT_POLLER.wait_writable(fd, sec, ...)
+    return io_wait_writable(fd, sec, ...)
 end
 
 --- unwait
@@ -208,25 +213,30 @@ end
 --- @param fname string
 --- @param fd integer
 --- @param sec? number
---- @return boolean ok
+--- @param ... integer
+--- @return integer fd
 --- @return any err
 --- @return boolean? timeout
-local function do_wait(fname, fd, sec)
+--- @return boolean? hup
+local function do_wait(fname, fd, sec, ...)
     if not is_uint(fd) then
         error('fd must be uint', 2)
     elseif sec ~= nil and not is_unsigned(sec) then
         error('sec must be unsigned number', 2)
     end
 
-    local ok, err, timeout = Poller[fname](fd, sec)
-    if ok then
-        return true
+    local evfd, err, timeout, hup = Poller[fname](fd, sec, ...)
+    if evfd then
+        if not is_uint(evfd) then
+            error(fname .. ' returned non-uint fd')
+        end
+        return evfd, nil, nil, hup and true
     elseif err then
-        return false, toerror(err), timeout
+        return nil, toerror(err), timeout
     elseif timeout then
-        return false, nil, true
+        return nil, nil, true
     end
-    error(fname .. ' returned false|nil with neither error nor timeout')
+    error(fname .. ' returned nil with neither error nor timeout')
 end
 
 --- do_unwait
@@ -295,21 +305,25 @@ end
 --- wait_readable
 --- @param fd integer
 --- @param sec? integer
---- @return boolean ok
+--- @param ... integer
+--- @return integer fd
 --- @return any err
 --- @return boolean? timeout
-local function wait_readable(fd, sec)
-    return do_wait('wait_readable', fd, sec)
+--- @return boolean? hup
+local function wait_readable(fd, sec, ...)
+    return do_wait('wait_readable', fd, sec, ...)
 end
 
 --- wait_writable
 --- @param fd integer
 --- @param sec? number
---- @return boolean ok
+--- @param ... integer
+--- @return integer fd
 --- @return any err
 --- @return boolean? timeout
-local function wait_writable(fd, sec)
-    return do_wait('wait_writable', fd, sec)
+--- @return boolean? hup
+local function wait_writable(fd, sec, ...)
+    return do_wait('wait_writable', fd, sec, ...)
 end
 
 --- unwait

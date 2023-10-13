@@ -58,7 +58,7 @@ execute the next line later.
 - `err:any`: error message.
 
 
-## ok, err, timeout = wait_readable( fd [, sec] )
+## fd, err, timeout = wait_readable( fd [, sec [, ...]] )
 
 wait until the file descriptor is readable.
 
@@ -66,15 +66,17 @@ wait until the file descriptor is readable.
 
 - `fd:integer`: a file descriptor.
 - `sec:number`: specify a sec `seconds` as unsigned number.
+- `...:integer`: additional file descriptors.
 
 **Returns**
 
-- `ok:boolean`: `true` on readable. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `fd:integer`: a file descriptor on readable.
+- `err:any`: error object.
 - `timeout:boolean`: `true` if operation has timed out.
+- `hup:boolean`: `true` if the device or socket has been disconnected.
 
 
-## ok, err, timeout = wait_writable( fd [, sec] )
+## fd, err, timeout = wait_writable( fd [, sec] )
 
 wait until the file descriptor is writable.
 
@@ -82,12 +84,14 @@ wait until the file descriptor is writable.
 
 - `fd:integer`: a file descriptor.
 - `sec:number`: specify a sec `seconds` as unsigned number.
+- `...:integer`: additional file descriptors.
 
 **Returns**
 
-- `ok:boolean`: `true` on writable. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `fd:integer`: a file descriptor on writable.
+- `err:any`: error object.
 - `timeout:boolean`: `true` if operation has timed out.
+- `hup:boolean`: `true` if the device or socket has been disconnected.
 
 
 ## ok, err = unwait_readable( fd )

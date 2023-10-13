@@ -2,6 +2,13 @@ require('luacov')
 local assert = require('assert')
 local errno = require('errno')
 local gpoll = require('gpoll')
+local pipe = require('os.pipe')
+local FDR, FDW
+do
+    local err
+    FDR, FDW, err = pipe(true)
+    assert(FDR, err)
+end
 
 local function test_default()
     -- test that default returns
@@ -14,18 +21,34 @@ local function test_default()
     assert.is_nil(err)
 
     local timeout
+    -- test that wait writable
+    local fd, hup
+    fd, err, timeout, hup = gpoll.wait_writable(FDW:fd())
+    assert.equal(fd, FDW:fd())
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.is_nil(hup)
+
+    -- test that wait readable
+    FDW:write('x')
+    fd, err, timeout, hup = gpoll.wait_readable(FDR:fd())
+    assert.equal(fd, FDR:fd())
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.is_nil(hup)
+    FDR:read()
+
+    -- test that readable
     for _, fn in ipairs({
         gpoll.unwait,
         gpoll.unwait_readable,
-        gpoll.unwait_writable,
         gpoll.read_lock,
-        gpoll.write_lock,
         gpoll.read_unlock,
+        gpoll.unwait_writable,
+        gpoll.write_lock,
         gpoll.write_unlock,
-        gpoll.wait_readable,
-        gpoll.wait_writable,
     }) do
-        ok, err, timeout = fn(1)
+        ok, err, timeout = fn(FDR:fd())
         assert.is_false(ok)
         assert.equal(err.type, errno.ENOTSUP)
         assert.is_nil(timeout)
@@ -80,44 +103,50 @@ end
 local function test_wait_readable()
     gpoll.set_poller()
 
-    -- test that true if fd is wait readable
-    local ok, err, timeout = gpoll.wait_readable(1)
-    assert.is_false(ok)
-    assert.equal(err.type, errno.ENOTSUP)
-    assert.is_nil(timeout)
-
-    -- test that return only true
-    gpoll.set_poller({
-        wait_readable = function()
-            return true, 'this error is ignored', true
-        end,
-    })
-    ok, err, timeout = gpoll.wait_readable(1)
-    assert.is_true(ok)
+    -- test that return fd if fd is readable
+    FDW:write('x')
+    local fd, err, timeout, hup = gpoll.wait_readable(FDR:fd())
+    assert.equal(fd, FDR:fd())
     assert.is_nil(err)
     assert.is_nil(timeout)
+    assert.is_nil(hup)
+    FDR:read()
+
+    -- test that return fd and hup
+    gpoll.set_poller({
+        wait_readable = function()
+            return 1, 'this error is ignored', true, true
+        end,
+    })
+    fd, err, timeout, hup = gpoll.wait_readable(1)
+    assert.equal(fd, 1)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.is_true(hup)
 
     -- test that return error
     gpoll.set_poller({
         wait_readable = function()
-            return false, 'wait error', true
+            return nil, 'wait error', true, true
         end,
     })
-    ok, err, timeout = gpoll.wait_readable(1)
-    assert.is_false(ok)
+    fd, err, timeout, hup = gpoll.wait_readable(1)
+    assert.is_nil(fd)
     assert.match(err, 'wait error')
     assert.is_true(timeout)
+    assert.is_nil(hup)
 
     -- test that return timeout
     gpoll.set_poller({
         wait_readable = function()
-            return false, nil, true
+            return nil, nil, true, true
         end,
     })
-    ok, err, timeout = gpoll.wait_readable(1)
-    assert.is_false(ok)
+    fd, err, timeout, hup = gpoll.wait_readable(1)
+    assert.is_nil(fd)
     assert.is_nil(err)
     assert.is_true(timeout)
+    assert.is_nil(hup)
 
     -- test that throws an error if fd is invalid
     err = assert.throws(gpoll.wait_readable, 'hello')
@@ -127,10 +156,19 @@ local function test_wait_readable()
     err = assert.throws(gpoll.wait_readable, 1, 'hello')
     assert.match(err, 'sec must be unsigned number')
 
-    -- test that throws an error if wait_readable return false with neither error nor timeout
+    -- test that throws an error if wait_readable return non-uint fd
     gpoll.set_poller({
         wait_readable = function()
-            return false
+            return true
+        end,
+    })
+    err = assert.throws(gpoll.wait_readable, 1)
+    assert.match(err, 'wait_readable returned non-uint fd')
+
+    -- test that throws an error if wait_readable return nil with neither error nor timeout
+    gpoll.set_poller({
+        wait_readable = function()
+            return nil
         end,
     })
     err = assert.throws(gpoll.wait_readable, 1)
@@ -141,43 +179,47 @@ local function test_wait_writable()
     gpoll.set_poller()
 
     -- test that true if fd is wait writable
-    local ok, err, timeout = gpoll.wait_writable(1)
-    assert.is_false(ok)
-    assert.equal(err.type, errno.ENOTSUP)
-    assert.is_nil(timeout)
-
-    -- test that return only true
-    gpoll.set_poller({
-        wait_writable = function()
-            return true, 'this error is ignored', true
-        end,
-    })
-    ok, err, timeout = gpoll.wait_writable(1)
-    assert.is_true(ok)
+    local fd, err, timeout, hup = gpoll.wait_writable(FDW:fd())
+    assert.equal(fd, FDW:fd())
     assert.is_nil(err)
     assert.is_nil(timeout)
+    assert.is_nil(hup)
+
+    -- test that return fd and hup
+    gpoll.set_poller({
+        wait_writable = function()
+            return 1, 'this error is ignored', true, true
+        end,
+    })
+    fd, err, timeout, hup = gpoll.wait_writable(1)
+    assert.equal(fd, 1)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.is_true(hup)
 
     -- test that return error and timeout
     gpoll.set_poller({
         wait_writable = function()
-            return false, 'wait error', true
+            return nil, 'wait error', true, true
         end,
     })
-    ok, err, timeout = gpoll.wait_writable(1)
-    assert.is_false(ok)
+    fd, err, timeout, hup = gpoll.wait_writable(1)
+    assert.is_nil(fd)
     assert.match(err, 'wait error')
     assert.is_true(timeout)
+    assert.is_nil(hup)
 
     -- test that return timeout
     gpoll.set_poller({
         wait_writable = function()
-            return false, nil, true
+            return nil, nil, true, true
         end,
     })
-    ok, err, timeout = gpoll.wait_writable(1)
-    assert.is_false(ok)
+    fd, err, timeout, hup = gpoll.wait_writable(1)
+    assert.is_nil(fd)
     assert.is_nil(err)
     assert.is_true(timeout)
+    assert.is_nil(hup)
 
     -- test that throws an error if fd is invalid
     err = assert.throws(gpoll.wait_writable, 'hello')
@@ -187,10 +229,19 @@ local function test_wait_writable()
     err = assert.throws(gpoll.wait_writable, 1, 'hello')
     assert.match(err, 'sec must be unsigned number')
 
-    -- test that throws an error if wait_writable return false with neither error nor timeout
+    -- test that throws an error if wait_writable return non-uint fd
     gpoll.set_poller({
         wait_writable = function()
-            return false
+            return true
+        end,
+    })
+    err = assert.throws(gpoll.wait_writable, 1)
+    assert.match(err, 'wait_writable returned non-uint fd')
+
+    -- test that throws an error if wait_writable return nil with neither error nor timeout
+    gpoll.set_poller({
+        wait_writable = function()
+            return nil
         end,
     })
     err = assert.throws(gpoll.wait_writable, 1)

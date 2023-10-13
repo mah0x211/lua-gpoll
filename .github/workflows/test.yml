@@ -55,6 +55,7 @@ jobs:
       run: |
         luarocks install luacov
         luarocks install assert
+        luarocks install os-pipe
     -
       name: Install
       run: |
