@@ -62,6 +62,10 @@ execute the next line later.
 
 wait until the file descriptor is readable.
 
+**NOTE:** 
+
+this function calls the `readable` function of the [lua-io-wait](https://github.com/mah0x211/lua-io-wait) module by default.
+
 **Parameters**
 
 - `fd:integer`: a file descriptor.
@@ -79,6 +83,10 @@ wait until the file descriptor is readable.
 ## fd, err, timeout = wait_writable( fd [, sec] )
 
 wait until the file descriptor is writable.
+
+**NOTE:** 
+
+this function calls the `writable` function of the [lua-io-wait](https://github.com/mah0x211/lua-io-wait) module by default.
 
 **Parameters**
 
@@ -200,6 +208,10 @@ releases a write lock.
 
 waits until `sec` seconds have elapsed.
 
+**NOTE:** 
+
+this function calls the `sleep` function of the [lua-time-sleep](https://github.com/mah0x211/lua-time-sleep) module by default.
+
 **Parameters**
 
 - `sec:number`: specify a wait `seconds` as unsigned number.
@@ -213,6 +225,10 @@ waits until `sec` seconds have elapsed.
 ## signo, err, timeout = sigwait( sec, signo, ... )
 
 waits for interrupt by the specified signals until the specified time.
+
+**NOTE:** 
+
+this function calls the `wait` function of the [lua-signal](https://github.com/mah0x211/lua-signal) module by default.
 
 **Parameters**
 
