@@ -1,6 +1,7 @@
 require('luacov')
 local assert = require('assert')
 local errno = require('errno')
+local signal = require('signal')
 local gpoll = require('gpoll')
 local pipe = require('os.pipe')
 local gettime = require('time.clock').gettime
@@ -57,10 +58,10 @@ local function test_default()
 
     -- wait signal
     local signo
-    signo, err, timeout = gpoll.sigwait(100, 123)
+    signo, err, timeout = gpoll.sigwait(0.01, signal.SIGINT)
     assert.is_nil(signo)
-    assert.equal(err.type, errno.ENOTSUP)
-    assert.is_nil(timeout)
+    assert.is_nil(err)
+    assert.is_true(timeout)
 
     -- wait sleep
     local rem
@@ -636,10 +637,14 @@ end
 
 local function test_sigwait()
     -- test that return error by default
-    local signo, err, timeout = gpoll.sigwait(500, 123)
+    local t = gettime()
+    local signo, err, timeout = gpoll.sigwait(1.5, signal.SIGINT)
+    t = gettime() - t
     assert.is_nil(signo)
-    assert.equal(err.type, errno.ENOTSUP)
-    assert.is_nil(timeout)
+    assert.is_nil(err)
+    assert.is_true(timeout)
+    assert.greater_or_equal(t, 1.5)
+    assert.less(t, 1.6)
 
     -- test that return only true
     gpoll.set_poller({
