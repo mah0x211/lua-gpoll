@@ -679,6 +679,16 @@ local function test_sigwait()
     assert.is_nil(err)
     assert.is_true(timeout)
 
+    -- test that return nothing
+    gpoll.set_poller({
+        sigwait = function()
+        end,
+    })
+    signo, err, timeout = gpoll.sigwait(1)
+    assert.is_nil(signo)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+
     -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.sigwait, math.huge)
     assert.match(err, 'sec must be unsigned number')
@@ -691,15 +701,6 @@ local function test_sigwait()
     })
     err = assert.throws(gpoll.sigwait, 1)
     assert.match(err, 'sigwait returned non-int value')
-
-    -- test that throws an error if sigwait return nil without an error
-    gpoll.set_poller({
-        sigwait = function()
-            return nil
-        end,
-    })
-    err = assert.throws(gpoll.sigwait, 1)
-    assert.match(err, 'sigwait returned nil with neither error nor timeout')
 end
 
 for k, f in pairs({

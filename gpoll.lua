@@ -406,7 +406,7 @@ end
 --- sigwait
 --- @param sec number
 --- @param ... integer signal-number
---- @return integer signo
+--- @return integer? signo
 --- @return any err
 --- @return boolean? timeout
 local function sigwait(sec, ...)
@@ -425,7 +425,7 @@ local function sigwait(sec, ...)
     elseif timeout then
         return nil, nil, true
     end
-    error('sigwait returned nil with neither error nor timeout')
+    -- if no signo arguments are given, sigwait returns nothing
 end
 
 return {

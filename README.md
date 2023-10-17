@@ -238,6 +238,6 @@ this function calls the `wait` function of the [lua-signal](https://github.com/m
 **Returns**
 
 - `signo:integer`: received signal number, or `nil` if an error occurs or timed out.
-- `err:error`: error object. (default: `errno.ENOTSUP`)
+- `err:error`: error object.
 - `timeout:boolean`: `true` if operation has timed out.
 
