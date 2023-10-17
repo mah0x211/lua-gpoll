@@ -213,17 +213,15 @@ end
 
 --- do_wait
 --- @param fname string
---- @param fd integer
+--- @param fd integer?
 --- @param sec? number
 --- @param ... integer
---- @return integer fd
+--- @return integer? fd
 --- @return any err
 --- @return boolean? timeout
 --- @return boolean? hup
 local function do_wait(fname, fd, sec, ...)
-    if not is_uint(fd) then
-        error('fd must be uint', 2)
-    elseif sec ~= nil and not is_unsigned(sec) then
+    if sec ~= nil and not is_unsigned(sec) then
         error('sec must be unsigned number', 2)
     end
 
@@ -238,7 +236,7 @@ local function do_wait(fname, fd, sec, ...)
     elseif timeout then
         return nil, nil, true
     end
-    error(fname .. ' returned nil with neither error nor timeout')
+    -- if no fd arguments are given, do_wait returns nothing
 end
 
 --- do_unwait
@@ -305,7 +303,7 @@ local function do_unlock(fname, fd)
 end
 
 --- wait_readable
---- @param fd integer
+--- @param fd integer?
 --- @param sec? integer
 --- @param ... integer
 --- @return integer fd
@@ -317,7 +315,7 @@ local function wait_readable(fd, sec, ...)
 end
 
 --- wait_writable
---- @param fd integer
+--- @param fd integer?
 --- @param sec? number
 --- @param ... integer
 --- @return integer fd
@@ -406,7 +404,7 @@ end
 --- sigwait
 --- @param sec number
 --- @param ... integer signal-number
---- @return integer signo
+--- @return integer? signo
 --- @return any err
 --- @return boolean? timeout
 local function sigwait(sec, ...)
@@ -425,7 +423,7 @@ local function sigwait(sec, ...)
     elseif timeout then
         return nil, nil, true
     end
-    error('sigwait returned nil with neither error nor timeout')
+    -- if no signo arguments are given, sigwait returns nothing
 end
 
 return {
