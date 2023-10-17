@@ -213,7 +213,7 @@ end
 
 --- do_wait
 --- @param fname string
---- @param fd integer
+--- @param fd integer?
 --- @param sec? number
 --- @param ... integer
 --- @return integer fd
@@ -221,9 +221,7 @@ end
 --- @return boolean? timeout
 --- @return boolean? hup
 local function do_wait(fname, fd, sec, ...)
-    if not is_uint(fd) then
-        error('fd must be uint', 2)
-    elseif sec ~= nil and not is_unsigned(sec) then
+    if sec ~= nil and not is_unsigned(sec) then
         error('sec must be unsigned number', 2)
     end
 
@@ -305,7 +303,7 @@ local function do_unlock(fname, fd)
 end
 
 --- wait_readable
---- @param fd integer
+--- @param fd integer?
 --- @param sec? integer
 --- @param ... integer
 --- @return integer fd
@@ -317,7 +315,7 @@ local function wait_readable(fd, sec, ...)
 end
 
 --- wait_writable
---- @param fd integer
+--- @param fd integer?
 --- @param sec? number
 --- @param ... integer
 --- @return integer fd

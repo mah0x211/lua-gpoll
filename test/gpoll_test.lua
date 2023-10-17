@@ -150,10 +150,6 @@ local function test_wait_readable()
     assert.is_true(timeout)
     assert.is_nil(hup)
 
-    -- test that throws an error if fd is invalid
-    err = assert.throws(gpoll.wait_readable, 'hello')
-    assert.match(err, 'fd must be uint')
-
     -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.wait_readable, 1, 'hello')
     assert.match(err, 'sec must be unsigned number')
@@ -222,10 +218,6 @@ local function test_wait_writable()
     assert.is_nil(err)
     assert.is_true(timeout)
     assert.is_nil(hup)
-
-    -- test that throws an error if fd is invalid
-    err = assert.throws(gpoll.wait_writable, 'hello')
-    assert.match(err, 'fd must be uint')
 
     -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.wait_writable, 1, 'hello')
