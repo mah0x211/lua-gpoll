@@ -150,6 +150,17 @@ local function test_wait_readable()
     assert.is_true(timeout)
     assert.is_nil(hup)
 
+    -- test that allow no return value
+    gpoll.set_poller({
+        wait_readable = function()
+        end,
+    })
+    fd, err, timeout, hup = gpoll.wait_readable()
+    assert.is_nil(fd)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.is_nil(hup)
+
     -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.wait_readable, 1, 'hello')
     assert.match(err, 'sec must be unsigned number')
@@ -162,15 +173,6 @@ local function test_wait_readable()
     })
     err = assert.throws(gpoll.wait_readable, 1)
     assert.match(err, 'wait_readable returned non-uint fd')
-
-    -- test that throws an error if wait_readable return nil with neither error nor timeout
-    gpoll.set_poller({
-        wait_readable = function()
-            return nil
-        end,
-    })
-    err = assert.throws(gpoll.wait_readable, 1)
-    assert.match(err, 'wait_readable .+ neither error nor timeout', false)
 end
 
 local function test_wait_writable()
@@ -219,6 +221,17 @@ local function test_wait_writable()
     assert.is_true(timeout)
     assert.is_nil(hup)
 
+    -- test that allow no return value
+    gpoll.set_poller({
+        wait_writable = function()
+        end,
+    })
+    fd, err, timeout, hup = gpoll.wait_writable()
+    assert.is_nil(fd)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.is_nil(hup)
+
     -- test that throws an error if sec is invalid
     err = assert.throws(gpoll.wait_writable, 1, 'hello')
     assert.match(err, 'sec must be unsigned number')
@@ -231,15 +244,6 @@ local function test_wait_writable()
     })
     err = assert.throws(gpoll.wait_writable, 1)
     assert.match(err, 'wait_writable returned non-uint fd')
-
-    -- test that throws an error if wait_writable return nil with neither error nor timeout
-    gpoll.set_poller({
-        wait_writable = function()
-            return nil
-        end,
-    })
-    err = assert.throws(gpoll.wait_writable, 1)
-    assert.match(err, 'wait_writable .+ neither error nor timeout', false)
 end
 
 local function test_unwait_readable()

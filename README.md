@@ -58,7 +58,7 @@ execute the next line later.
 - `err:any`: error message.
 
 
-## fd, err, timeout, hup = wait_readable( fd [, sec [, ...]] )
+## fd, err, timeout, hup = wait_readable( [fd [, sec [, ...]]] )
 
 wait until the file descriptor is readable.
 
@@ -80,7 +80,7 @@ this function calls the `readable` function of the [lua-io-wait](https://github.
 - `hup:boolean`: `true` if the device or socket has been disconnected.
 
 
-## fd, err, timeout, hup = wait_writable( fd [, sec [, ...]] )
+## fd, err, timeout, hup = wait_writable( [fd [, sec [, ...]]] )
 
 wait until the file descriptor is writable.
 

@@ -216,7 +216,7 @@ end
 --- @param fd integer?
 --- @param sec? number
 --- @param ... integer
---- @return integer fd
+--- @return integer? fd
 --- @return any err
 --- @return boolean? timeout
 --- @return boolean? hup
@@ -236,7 +236,7 @@ local function do_wait(fname, fd, sec, ...)
     elseif timeout then
         return nil, nil, true
     end
-    error(fname .. ' returned nil with neither error nor timeout')
+    -- if no fd arguments are given, do_wait returns nothing
 end
 
 --- do_unwait
