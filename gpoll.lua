@@ -23,8 +23,8 @@
 local type = type
 local rawequal = rawequal
 local floor = math.floor
-local format = string.format
 local toerror = require('error').toerror
+local fatalf = require('error').fatalf
 local new_errno = require('errno').new
 local io_wait_readable = require('io.wait').readable
 local io_wait_writable = require('io.wait').writable
@@ -189,7 +189,7 @@ local function set_poller(poller)
             if func == nil then
                 func = default_func
             elseif type(func) ~= 'function' then
-                error(format('%q is not function: %q', fname, type(func)), 2)
+                fatalf(2, '%q is not function: %q', fname, type(func))
             end
             newpoller[fname] = func
         end

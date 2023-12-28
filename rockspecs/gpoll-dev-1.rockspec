@@ -11,7 +11,8 @@ description = {
 }
 dependencies = {
     "lua >= 5.1",
-    "errno >= 0.3.0",
+    "error >= 0.12.0",
+    "errno >= 0.4.0",
     "io-wait >= 0.4.0",
     "signal >= 1.6.0",
     "time-sleep >= 0.2.1",
