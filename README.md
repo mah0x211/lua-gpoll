@@ -222,22 +222,38 @@ this function calls the `sleep` function of the [lua-time-sleep](https://github.
 - `err:any`: error object. (default: `errno.ENOTSUP`)
 
 
-## signo, err, timeout = sigwait( sec, signo, ... )
+## sig, err, timeout = sigwait( sec, ... )
 
 waits for interrupt by the specified signals until the specified time.
-
-**NOTE:** 
-
-this function calls the `wait` function of the [lua-signal](https://github.com/mah0x211/lua-signal) module by default.
 
 **Parameters**
 
 - `sec:number`: specify a wait `seconds` as unsigned number.
-- `signo:integer`: valid signal numbers.
+- `...:integer|string`: valid signal numbers or signal names.
+  - if the signal name is specified, then it is converted to a signal number and when the received signal number is equal to the converted signal number, the function returns the signal name.
 
 **Returns**
 
-- `signo:integer`: received signal number, or `nil` if an error occurs or timed out.
+- `sig:integer|string`: received signal number or signal name, or `nil` if an error occurs or timed out.
 - `err:error`: error object.
 - `timeout:boolean`: `true` if operation has timed out.
+
+**NOTE:** 
+
+this function calls the polling function as follows;
+
+```
+sig, err, timeout = sigwait( sec, ... )
+
+Parameters:
+  - sec:integer: specify a wait `seconds` as unsigned number.
+  - ...:integer: valid signal numbers.
+
+Returns:
+  - sig:integer: received signal number, or `nil` if an error occurs or timed out.
+  - err:any: error object.
+  - timeout:boolean: `true` if operation has timed out.
+```
+
+As a default, this function calls the `wait` function of the [lua-signal](https://github.com/mah0x211/lua-signal) module.
 

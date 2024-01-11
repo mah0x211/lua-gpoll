@@ -4,6 +4,7 @@ local errno = require('errno')
 local signal = require('signal')
 local gpoll = require('gpoll')
 local pipe = require('os.pipe')
+local fork = require('fork')
 local gettime = require('time.clock').gettime
 local FDR, FDW
 do
@@ -58,7 +59,7 @@ local function test_default()
 
     -- wait signal
     local signo
-    signo, err, timeout = gpoll.sigwait(0.01, signal.SIGINT)
+    signo, err, timeout = gpoll.sigwait(0.01, 'SIGINT')
     assert.is_nil(signo)
     assert.is_nil(err)
     assert.is_true(timeout)
@@ -632,26 +633,38 @@ local function test_sleep()
 end
 
 local function test_sigwait()
-    -- test that return error by default
-    local t = gettime()
-    local signo, err, timeout = gpoll.sigwait(1.5, signal.SIGINT)
-    t = gettime() - t
-    assert.is_nil(signo)
+    -- test that wait SIGINT signal
+    local p = assert(fork())
+    if p:is_child() then
+        gpoll.sleep(1)
+        signal.kill(signal.SIGINT, p:ppid())
+        os.exit()
+        return
+    end
+    local signo, err, timeout = gpoll.sigwait(1.5, 'SIGINT')
+    assert.equal(signo, 'SIGINT')
     assert.is_nil(err)
-    assert.is_true(timeout)
-    assert.greater_or_equal(t, 1.5)
-    assert.less(t, 1.6)
+    assert.is_nil(timeout)
 
-    -- test that return only true
+    -- test that return only signo
+    gpoll.set_poller({
+        sigwait = function()
+            return 123, 'this error is ignored', true
+        end,
+    })
+    signo, err, timeout = gpoll.sigwait(100, 123)
+    assert.equal(signo, 123)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+
+    -- test that throws an error if sigwait returns an unrequested signal
     gpoll.set_poller({
         sigwait = function()
             return 456, 'this error is ignored', true
         end,
     })
-    signo, err, timeout = gpoll.sigwait(100, 123)
-    assert.equal(signo, 456)
-    assert.is_nil(err)
-    assert.is_nil(timeout)
+    err = assert.throws(gpoll.sigwait, 100, 123)
+    assert.match(err, 'unrequested signal number 456')
 
     -- test that return error and timeout
     gpoll.set_poller({
@@ -689,6 +702,14 @@ local function test_sigwait()
     err = assert.throws(gpoll.sigwait, math.huge)
     assert.match(err, 'sec must be unsigned number')
 
+    -- test that throws an error if signal name is invalid
+    err = assert.throws(gpoll.sigwait, 1, 'SIG_UNSUPPORTED')
+    assert.match(err, 'unsupported signal')
+
+    -- test that throws an error if signal number is invalid
+    err = assert.throws(gpoll.sigwait, 1, -1)
+    assert.match(err, 'signal number must be uint')
+
     -- test that throws an error if sigwait return non-int value
     gpoll.set_poller({
         sigwait = function()
@@ -699,6 +720,7 @@ local function test_sigwait()
     assert.match(err, 'sigwait returned non-int value')
 end
 
+print('run tests')
 for k, f in pairs({
     test_default = test_default,
     test_set_poller = test_set_poller,
@@ -723,4 +745,4 @@ for k, f in pairs({
         print(err)
     end
 end
-
+print('done')
