@@ -13,7 +13,7 @@ jobs:
         submodules: 'true'
     -
       name: Setup Lua
-      uses: leafo/gh-actions-lua@v8.0.0
+      uses: leafo/gh-actions-lua@v8
     -
       name: Setup Luarocks
       uses: leafo/gh-actions-luarocks@v4
@@ -44,7 +44,7 @@ jobs:
         submodules: 'true'
     -
       name: Setup Lua ${{ matrix.lua-version }}
-      uses: leafo/gh-actions-lua@v8.0.0
+      uses: leafo/gh-actions-lua@v8
       with:
         luaVersion: ${{ matrix.lua-version }}
     -
@@ -57,6 +57,8 @@ jobs:
         luarocks install assert
         luarocks install os-pipe
         luarocks install time-clock
+        luarocks install getpid
+        luarocks install fork
     -
       name: Install
       run: |

@@ -21,8 +21,11 @@
 --
 -- assign to local
 local type = type
+local pairs = pairs
 local rawequal = rawequal
 local floor = math.floor
+local select = select
+local unpack = unpack or table.unpack
 local toerror = require('error').toerror
 local fatalf = require('error').fatalf
 local new_errno = require('errno').new
@@ -30,7 +33,7 @@ local io_wait_readable = require('io.wait').readable
 local io_wait_writable = require('io.wait').writable
 local time_sleep = require('time.sleep')
 local signal_wait = require('signal').wait
-
+-- constants
 local INF_POS = math.huge
 local INF_NEG = -INF_POS
 
@@ -401,10 +404,18 @@ local function sleep(sec)
     error('sleep returned nil without an error')
 end
 
+--- @type table<string, integer>
+local SIGNAME2NO = {}
+for k, v in pairs(require('signal')) do
+    if string.find(k, '^SIG') then
+        SIGNAME2NO[k] = v
+    end
+end
+
 --- sigwait
 --- @param sec number
---- @param ... integer signal-number
---- @return integer? signo
+--- @param ... integer|string signal-number or signal-name
+--- @return integer|string? signo
 --- @return any err
 --- @return boolean? timeout
 local function sigwait(sec, ...)
@@ -412,18 +423,44 @@ local function sigwait(sec, ...)
         error('sec must be unsigned number', 2)
     end
 
-    local signo, err, timeout = Poller.sigwait(sec, ...)
+    local args = {
+        ...,
+    }
+    local narg = select('#', ...)
+    local retsig = {}
+    for i = 1, narg do
+        local sig = args[i]
+        if type(sig) == 'string' then
+            local signo = SIGNAME2NO[sig]
+            if not signo then
+                fatalf(2, 'unsupported signal name: %q', sig)
+            end
+            args[i] = signo
+            retsig[signo] = sig
+        elseif not is_uint(sig) then
+            fatalf(2, 'signal number must be uint: %q', tostring(sig))
+        else
+            retsig[sig] = sig
+        end
+    end
+
+    local signo, err, timeout = Poller.sigwait(sec, unpack(args, 1, narg))
     if signo then
         if not is_int(signo) then
             error('sigwait returned non-int value')
         end
-        return signo
+
+        local sig = retsig[signo]
+        if not sig then
+            fatalf(2, 'sigwait returned unrequested signal number %d', signo)
+        end
+        return sig
     elseif err then
         return nil, toerror(err), timeout
     elseif timeout then
         return nil, nil, true
     end
-    -- if no signo arguments are given, sigwait returns nothing
+    -- if no signal arguments are given, sigwait returns nothing
 end
 
 return {
