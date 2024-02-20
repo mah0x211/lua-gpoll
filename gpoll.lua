@@ -33,6 +33,8 @@ local io_wait_readable = require('io.wait').readable
 local io_wait_writable = require('io.wait').writable
 local time_sleep = require('time.sleep')
 local signal_wait = require('signal').wait
+local new_deadline = require('time.clock.deadline').new
+local waitpid = require('waitpid')
 -- constants
 local INF_POS = math.huge
 local INF_NEG = -INF_POS
@@ -463,6 +465,75 @@ local function sigwait(sec, ...)
     -- if no signal arguments are given, sigwait returns nothing
 end
 
+--- waitpid
+--- @param pid integer
+--- @param sec? number
+--- @param untraced? boolean
+--- @param continued? boolean
+--- @return table? res
+--- @return any err
+--- @return boolean? timeout
+local function do_waitpid(pid, sec, untraced, continued)
+    if not is_int(pid) then
+        error('pid must be int', 2)
+    elseif sec ~= nil and not is_unsigned(sec) then
+        error('sec must be unsigned number', 2)
+    elseif untraced ~= nil and type(untraced) ~= 'boolean' then
+        error('untraced must be boolean', 2)
+    elseif continued ~= nil and type(continued) ~= 'boolean' then
+        error('continued must be boolean', 2)
+    end
+
+    local opts = {
+        'nohang',
+    }
+    if untraced then
+        opts[#opts + 1] = 'untraced'
+    end
+    if continued then
+        opts[#opts + 1] = 'continued'
+    end
+
+    local deadl = sec and new_deadline(sec)
+    local res, err, again = waitpid(pid, unpack(opts))
+    if not again then
+        return res, err
+    end
+
+    --
+    -- NOTE: some platforms (e.g. macOS) sometimes ignore the SIGCHLD signal.
+    -- so, we need to poll the child process status with a small interval.
+    --
+    if deadl then
+        while again do
+            sec = deadl:remain()
+            if sec == 0 then
+                -- timeout
+                return nil, nil, true
+            end
+
+            local _
+            _, err, again = sigwait(sec / 2, 'SIGCHLD')
+            if not err then
+                -- waitpid again
+                res, err, again = waitpid(pid, unpack(opts))
+            end
+        end
+        return res, err
+    end
+
+    while again do
+        local _
+        _, err, again = sigwait(1, 'SIGCHLD')
+        if not err then
+            -- waitpid again
+            res, err, again = waitpid(pid, unpack(opts))
+        end
+    end
+
+    return res, err
+end
+
 return {
     set_poller = set_poller,
     pollable = pollable,
@@ -478,4 +549,5 @@ return {
     write_unlock = write_unlock,
     sleep = sleep,
     sigwait = sigwait,
+    waitpid = do_waitpid,
 }
