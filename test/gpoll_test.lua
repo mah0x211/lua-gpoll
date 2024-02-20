@@ -720,6 +720,72 @@ local function test_sigwait()
     assert.match(err, 'sigwait returned non-int value')
 end
 
+local function test_waitpid()
+    local p = assert(fork())
+    if p:is_child() then
+        gpoll.sleep(0.5)
+        os.exit(123)
+    end
+
+    -- test that waitpid timed out immediately
+    local t = gettime()
+    local res, err, timeout = gpoll.waitpid(p:pid(), 0, true, true)
+    t = gettime() - t
+    assert.less(t, 0.1)
+    assert.is_nil(res)
+    assert.is_nil(err)
+    assert.is_true(timeout)
+
+    -- test that waitpid timed out after 0.1 sec
+    t = gettime()
+    res, err, timeout = gpoll.waitpid(p:pid(), 1)
+    t = gettime() - t
+    assert.less(t, 1)
+    assert.equal(res, {
+        pid = p:pid(),
+        exit = 123,
+    })
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+
+    -- test that waits for child process to exit forever
+    p = assert(fork())
+    if p:is_child() then
+        gpoll.sleep(0.5)
+        os.exit(123)
+    end
+
+    res, err, timeout = gpoll.waitpid(p:pid())
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.equal(res, {
+        pid = p:pid(),
+        exit = 123,
+    })
+
+    -- test that return nothing if no child process exited
+    res, err, timeout = gpoll.waitpid(p:pid())
+    assert.is_nil(res)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+
+    -- test that throws an error if pid is invalid
+    err = assert.throws(gpoll.waitpid, 'hello')
+    assert.match(err, 'pid must be int')
+
+    -- test that throws an error if sec is invalid
+    err = assert.throws(gpoll.waitpid, 1, 'hello')
+    assert.match(err, 'sec must be unsigned number')
+
+    -- test that throws an error if untraced is invalid
+    err = assert.throws(gpoll.waitpid, 1, 1, 'hello')
+    assert.match(err, 'untraced must be boolean')
+
+    -- test that throws an error if continued is invalid
+    err = assert.throws(gpoll.waitpid, 1, 1, true, 'hello')
+    assert.match(err, 'continued must be boolean')
+end
+
 print('run tests')
 for k, f in pairs({
     test_default = test_default,
@@ -735,13 +801,14 @@ for k, f in pairs({
     test_write_unlock = test_write_unlock,
     test_sleep = test_sleep,
     test_sigwait = test_sigwait,
+    test_waitpid = test_waitpid,
 }) do
     gpoll.set_poller()
     local ok, err = xpcall(f, debug.traceback)
     if ok then
-        print(k .. ': ok')
+        print(k .. ' ... ok')
     else
-        print(k .. ': fail')
+        print(k .. ' ... fail')
         print(err)
     end
 end

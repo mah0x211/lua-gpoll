@@ -14,8 +14,9 @@ dependencies = {
     "error >= 0.12.0",
     "errno >= 0.4.0",
     "io-wait >= 0.4.0",
-    "signal >= 1.6.0",
+    "signal >= 1.6.1",
     "time-sleep >= 0.2.1",
+    "waitpid >= 0.2.0",
 }
 build = {
     type = "builtin",

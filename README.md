@@ -257,3 +257,27 @@ Returns:
 
 As a default, this function calls the `wait` function of the [lua-signal](https://github.com/mah0x211/lua-signal) module.
 
+
+## res, err, timeout = waitpid( pid, [sec [, untraced [, continued]]] )
+
+waits for a child process to change state.
+
+**NOTE:**
+
+this function calls the `waitpid` function of the [lua-waitpid](https://github.com/mah0x211/lua-waitpid) module.
+
+also, this function cannot be replaced by the `set_poller` function.
+
+**Parameters**
+
+- `pid:integer`: a process id.
+- `sec:number`: specify a wait `seconds` as unsigned number, or `nil` to wait forever.
+- `untraced:boolean`: set `true` to return when a child process is stopped, and the status of the child process is not reported.
+- `continued:boolean`: set `true` to return when a child process is continued by a `SIGCONT` signal.
+
+**Returns**
+
+- `res:table`: a result table of the `waitpid()` function.
+- `err:any`: error object.
+- `timeout:boolean`: `true` if operation has timed out.
+
