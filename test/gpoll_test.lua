@@ -786,6 +786,50 @@ local function test_waitpid()
     assert.match(err, 'continued must be boolean')
 end
 
+local function test_waitpid_sigstop()
+    local p = assert(fork())
+    if p:is_child() then
+        gpoll.sleep(0.5)
+        signal.kill(signal.SIGSTOP)
+        os.exit(123)
+    end
+
+    -- test that return res.sigstop=true if child process is stopped
+    local res, err, timeout = gpoll.waitpid(p:pid(), nil, true)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.equal(res, {
+        pid = p:pid(),
+        sigstop = signal.SIGSTOP,
+    })
+end
+
+local function test_waitpid_sigcont()
+    local p1 = assert(fork())
+    if p1:is_child() then
+        gpoll.sleep(0.1)
+        signal.kill(signal.SIGSTOP)
+        gpoll.sleep(1.5)
+        os.exit(123)
+    end
+
+    local p2 = assert(fork())
+    if p2:is_child() then
+        gpoll.sleep(0.1)
+        signal.kill(signal.SIGCONT, p1:pid())
+        os.exit(123)
+    end
+
+    -- test that return res.sigcont=true if child process is continued
+    local res, err, timeout = gpoll.waitpid(p1:pid(), nil, nil, true)
+    assert.is_nil(err)
+    assert.is_nil(timeout)
+    assert.equal(res, {
+        pid = p1:pid(),
+        sigcont = true,
+    })
+end
+
 print('run tests')
 for k, f in pairs({
     test_default = test_default,
@@ -802,6 +846,8 @@ for k, f in pairs({
     test_sleep = test_sleep,
     test_sigwait = test_sigwait,
     test_waitpid = test_waitpid,
+    test_waitpid_sigstop = test_waitpid_sigstop,
+    test_waitpid_sigcont = test_waitpid_sigcont,
 }) do
     gpoll.set_poller()
     local ok, err = xpcall(f, debug.traceback)
