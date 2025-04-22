@@ -103,6 +103,19 @@ local function test_set_poller()
     assert.match(err, 'is not function')
 end
 
+local function test_use()
+    -- confirm that default poller is not pollable
+    assert.is_false(gpoll.pollable())
+
+    -- test that use poller
+    gpoll.use('test/mypoller')
+    assert.is_true(gpoll.pollable())
+
+    -- test that throws an error if poller returns invalid value
+    local err = assert.throws(gpoll.use, 'test/invalidpoller')
+    assert.re_match(err, 'module .+ must return table')
+end
+
 local function test_wait_readable()
     gpoll.set_poller()
 
@@ -724,6 +737,7 @@ print('run tests')
 for k, f in pairs({
     test_default = test_default,
     test_set_poller = test_set_poller,
+    test_use = test_use,
     test_wait_readable = test_wait_readable,
     test_wait_writable = test_wait_writable,
     test_unwait_readable = test_unwait_readable,

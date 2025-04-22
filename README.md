@@ -14,12 +14,12 @@ luarocks install gpoll
 
 ***
 
-This module provides a generic interface for synchronous I/O multiplexing processing. therefore, you must be set polling fuctions with `set_poller` function for the actual processing.
+This module provides a generic interface for synchronous I/O multiplexing. Therefore, you must set the polling functions using either the `set_poller` or `use` function to perform actual processing.
 
 
 ## set_poller( [poller] )
 
-set the polling functions. if the `poller` table is `nil` or not contains the polling functions, then the default polling functions are set.
+Sets the polling functions. If the `poller` table is `nil` or does not contain the necessary polling functions, the default ones are used.
 
 **Parameters**
 
@@ -36,6 +36,31 @@ gpoll.set_poller({
     end,
 })
 ```
+
+
+## use( modname )
+
+Loads the module specified by `modname` and sets its polling functions.
+
+**Parameters**
+
+- `modname:string`: a module name.
+
+**Example**
+
+```lua
+local gpoll = require('gpoll')
+gpoll.use('mypoller') -- loads the module 'mypoller' and sets the polling functions
+```
+
+The above example is equivalent to the following code:
+
+```lua
+local gpoll = require('gpoll')
+local poller = require('mypoller')
+gpoll.set_poller(poller)
+```
+
 
 # Polling API Interfaces
 
