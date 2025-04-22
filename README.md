@@ -66,70 +66,95 @@ gpoll.set_poller(poller)
 
 ## ok = pollable()
 
-determine the availability of the polling mechanism.
+Checks whether a polling mechanism is available
 
 **Returns**
 
-- `ok:boolean`: `true` on the polling mechanism is available.
+- `ok:boolean`: `true` if a polling mechanism is available; otherwise, `false`.
+
+**Example**
+
+```lua
+local gpoll = require('gpoll')
+local ok = gpoll.pollable()
+if ok then
+    print('polling mechanism is available')
+else
+    print('polling mechanism is not available')
+end
+```
 
 
 ## ok, err = later()
 
-execute the next line later.
+Suspends the current coroutine and reschedules it to the end of the current run queue. When the coroutine is resumed from the run queue, the function returns `true`.
+
+This function is typically used to yield control and defer execution to other tasks in the queue, ensuring fair scheduling.
+
 
 **Returns**
 
-- `ok:boolean`: `true` when a process comes back.
-- `err:any`: error message.
+- `ok:boolean`: `true` when the coroutine is resumed from the run queue.
+- `err:any`: an error message if the task could not be rescheduled.
+
+**Example**
+
+```lua
+local gpoll = require('gpoll')
+local ok, err = gpoll.later()
+if not ok then
+    print('error: ' .. err)
+end
+```
 
 
 ## fd, err, timeout, hup = wait_readable( [fd [, sec [, ...]]] )
 
-wait until the file descriptor is readable.
+Waits until one of the specified file descriptors becomes readable.
 
 **NOTE:** 
 
-this function calls the `readable` function of the [lua-io-wait](https://github.com/mah0x211/lua-io-wait) module by default.
+By default, this function calls the `readable` function from the [lua-io-wait](https://github.com/mah0x211/lua-io-wait) module.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `sec:number`: specify a sec `seconds` as unsigned number.
-- `...:integer`: additional file descriptors.
+- `sec:number`: optional timeout in seconds, specified as an unsigned number.
+- `...:integer`: additional file descriptors to wait for.
 
 **Returns**
 
-- `fd:integer`: a file descriptor on readable.
-- `err:any`: error object.
-- `timeout:boolean`: `true` if operation has timed out.
+- `fd:integer`: a file descriptor that became readable.
+- `err:any`: error object, or `nil` if no error occurred.
+- `timeout:boolean`: `true` if operation timed out.
 - `hup:boolean`: `true` if the device or socket has been disconnected.
 
 
 ## fd, err, timeout, hup = wait_writable( [fd [, sec [, ...]]] )
 
-wait until the file descriptor is writable.
+Waits until one of the specified file descriptors becomes writable.
 
 **NOTE:** 
 
-this function calls the `writable` function of the [lua-io-wait](https://github.com/mah0x211/lua-io-wait) module by default.
+By default, this function calls the `writable` function from the [lua-io-wait](https://github.com/mah0x211/lua-io-wait) module.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `sec:number`: specify a sec `seconds` as unsigned number.
-- `...:integer`: additional file descriptors.
+- `sec:number`: optional timeout in seconds, specified as an unsigned number.
+- `...:integer`: additional file descriptors to wait for.
 
 **Returns**
 
-- `fd:integer`: a file descriptor on writable.
-- `err:any`: error object.
-- `timeout:boolean`: `true` if operation has timed out.
+- `fd:integer`: a file descriptor that became readable.
+- `err:any`: error object, or `nil` if no error occurred.
+- `timeout:boolean`: `true` if operation timed out.
 - `hup:boolean`: `true` if the device or socket has been disconnected.
 
 
 ## ok, err = unwait_readable( fd )
 
-cancel waiting for file descriptor to be readable.
+Cancels a pending wait operation for the specified file descriptor to become readable.
 
 **Parameters**
 
@@ -137,13 +162,13 @@ cancel waiting for file descriptor to be readable.
 
 **Returns**
 
-- `ok:boolean`: `true` on success. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `ok:boolean`: `true` if the operation was successful; otherwise, `false`.  
+- `err:any`: error object. by default, `errno.ENOTSUP` is returned if the operation is not supported.
 
 
 ## ok, err = unwait_writable( fd )
 
-cancel waiting for file descriptor to be writable.
+Cancels a pending wait operation for the specified file descriptor to become writable.
 
 **Parameters**
 
@@ -151,13 +176,13 @@ cancel waiting for file descriptor to be writable.
 
 **Returns**
 
-- `ok:boolean`: `true` on success. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `ok:boolean`: `true` if the operation was successful; otherwise, `false`.  
+- `err:any`: error object. by default, `errno.ENOTSUP` is returned if the operation is not supported.
 
 
 ## ok, err = unwait( fd )
 
-cancels waiting for file descriptor to be readable/writable.
+Cancels any pending wait operation for the specified file descriptor to become readable or writable.
 
 **Parameters**
 
@@ -165,29 +190,30 @@ cancels waiting for file descriptor to be readable/writable.
 
 **Returns**
 
-- `ok:boolean`: `true` on success. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `ok:boolean`: `true` if the operation was successful; otherwise, `false`.  
+- `err:any`: error object. by default, `errno.ENOTSUP` is returned if the operation is not supported.
 
 
 ## ok, err, timeout = read_lock( fd [, sec] )
 
-waits until a read lock is acquired.
+Waits until a read lock is successfully acquired on the specified file descriptor.
+
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `sec:number`: a sec `seconds` as unsigned number.
+- `sec:number`: optional timeout in seconds, specified as an unsigned number.
 
 **Returns**
 
-- `ok:boolean`: `true` on success. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
-- `timeout:boolean`: `true` if operation has timed out.
+- `ok:boolean`: `true` if the lock was successfully acquired; otherwise, `false`.
+- `err:any`: an error object. by default, `errno.ENOTSUP` is returned if the operation is not supported.
+- `timeout:boolean`: `true` if the operation timed out before acquiring the lock.
 
 
 ## ok, err = read_unlock( fd )
 
-releases a read lock.
+Releases a previously acquired read lock on the specified file descriptor.
 
 **Parameters**
 
@@ -195,29 +221,29 @@ releases a read lock.
 
 **Returns**
 
-- `ok:boolean`: `true` on success. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `ok:boolean`: `true` if the lock was successfully released; otherwise, `false`.  
+- `err:any`: an error object. by default, `errno.ENOTSUP` is returned if the operation is not supported.
 
 
 ## ok, err, timeout = write_lock( fd [, sec] )
 
-waits until a write lock is acquired.
+Waits until a write lock is successfully acquired on the specified file descriptor.
 
 **Parameters**
 
 - `fd:integer`: a file descriptor.
-- `sec:number`: a sec `seconds` as unsigned number.
+- `sec:number`: optional timeout in seconds, specified as an unsigned number.
 
 **Returns**
 
-- `ok:boolean`: `true` on success. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
-- `timeout:boolean`: `true` if operation has timed out.
+- `ok:boolean`: `true` if the lock was successfully acquired; otherwise, `false`.
+- `err:any`: an error object. by default, `errno.ENOTSUP` is returned if the operation is not supported.
+- `timeout:boolean`: `true` if the operation timed out before acquiring the lock.
 
 
 ## ok, err = write_unlock( fd )
 
-releases a write lock.
+Releases a previously acquired write lock on the specified file descriptor.
 
 **Parameters**
 
@@ -225,60 +251,46 @@ releases a write lock.
 
 **Returns**
 
-- `ok:boolean`: `true` on success. (default: `false`)
-- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `ok:boolean`: `true` if the lock was successfully released; otherwise, `false`.  
+- `err:any`: an error object. by default, `errno.ENOTSUP` is returned if the operation is not supported.
 
 
 ## rem, err = sleep( sec )
 
-waits until `sec` seconds have elapsed.
+Waits until the specified number of seconds has elapsed.
 
 **NOTE:** 
 
-this function calls the `sleep` function of the [lua-time-sleep](https://github.com/mah0x211/lua-time-sleep) module by default.
+By default, this function calls the `sleep` function from the [lua-time-sleep](https://github.com/mah0x211/lua-time-sleep) module.
+
 
 **Parameters**
 
-- `sec:number`: specify a wait `seconds` as unsigned number.
+- `sec:number`: the duration to wait, specified in seconds as an unsigned number.
 
 **Returns**
 
-- `rem:number`: remaining seconds, or `nil` if an error occurs.
-- `err:any`: error object. (default: `errno.ENOTSUP`)
+- `rem:number`: the number of remaining seconds if interrupted; otherwise `0`. returns `nil` if an error occurs.
+- `err:any`: an error object. by default, `errno.ENOTSUP` is returned if the operation is not supported.
 
 
 ## sig, err, timeout = sigwait( sec, ... )
 
-waits for interrupt by the specified signals until the specified time.
+Waits for an interrupt signal matching one of the specified signals, or until the timeout expires.
+
+**NOTE:**
+
+By default, this function calls the `wait` function from the [lua-signal](https://github.com/mah0x211/lua-signal) module.
 
 **Parameters**
 
-- `sec:number`: specify a wait `seconds` as unsigned number.
-- `...:integer|string`: valid signal numbers or signal names.
-  - if the signal name is specified, then it is converted to a signal number and when the received signal number is equal to the converted signal number, the function returns the signal name.
+- `sec:number`: the maximum time to wait, specified in seconds as an unsigned number.
+- `...:integer|string`: One or more signal numbers or signal names.
+    - If a signal name is specified, it will be converted to its corresponding signal number. When the received signal matches a signal name, the name is returned instead of the number.
 
 **Returns**
 
-- `sig:integer|string`: received signal number or signal name, or `nil` if an error occurs or timed out.
-- `err:error`: error object.
-- `timeout:boolean`: `true` if operation has timed out.
-
-**NOTE:** 
-
-this function calls the polling function as follows;
-
-```
-sig, err, timeout = sigwait( sec, ... )
-
-Parameters:
-  - sec:integer: specify a wait `seconds` as unsigned number.
-  - ...:integer: valid signal numbers.
-
-Returns:
-  - sig:integer: received signal number, or `nil` if an error occurs or timed out.
-  - err:any: error object.
-  - timeout:boolean: `true` if operation has timed out.
-```
-
-As a default, this function calls the `wait` function of the [lua-signal](https://github.com/mah0x211/lua-signal) module.
+- `sig:integer|string`: the received signal number or signal name, or `nil` if an error occurred or the operation timed out.
+- `err:any`: an error object.
+- `timeout:boolean`: `true` if the operation timed out before a signal was received.
 
