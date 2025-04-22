@@ -202,6 +202,16 @@ local function set_poller(poller)
     Poller = newpoller
 end
 
+--- use_module
+--- @param modname string
+local function use_module(modname)
+    local mod = require(modname)
+    if type(mod) ~= 'table' then
+        fatalf(2, 'module %q must return table', modname)
+    end
+    set_poller(mod)
+end
+
 --- pollable
 --- @return boolean ok
 local function pollable()
@@ -464,6 +474,7 @@ local function sigwait(sec, ...)
 end
 
 return {
+    use = use_module,
     set_poller = set_poller,
     pollable = pollable,
     later = later,
