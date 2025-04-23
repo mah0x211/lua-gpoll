@@ -103,6 +103,17 @@ local function test_set_poller()
     assert.match(err, 'is not function')
 end
 
+local function test_set_poller_with_ctx()
+    -- test that set custom poller with context
+    gpoll.set_poller({
+        pollable = function(ctx)
+            assert.equal(ctx, 'hello')
+            return true
+        end,
+    }, 'hello')
+    assert.is_true(gpoll.pollable())
+end
+
 local function test_use()
     -- confirm that default poller is not pollable
     assert.is_false(gpoll.pollable())
@@ -737,6 +748,7 @@ print('run tests')
 for k, f in pairs({
     test_default = test_default,
     test_set_poller = test_set_poller,
+    test_set_poller_with_ctx = test_set_poller_with_ctx,
     test_use = test_use,
     test_wait_readable = test_wait_readable,
     test_wait_writable = test_wait_writable,

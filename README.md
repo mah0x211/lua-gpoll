@@ -17,13 +17,15 @@ luarocks install gpoll
 This module provides a generic interface for synchronous I/O multiplexing. Therefore, you must set the polling functions using either the `set_poller` or `use` function to perform actual processing.
 
 
-## set_poller( [poller] )
+## set_poller( [poller] [, ctx] )
 
 Sets the polling functions. If the `poller` table is `nil` or does not contain the necessary polling functions, the default ones are used.
 
 **Parameters**
 
 - `poller:table`: a poller object.
+- `ctx:any`: an optional context object (except `nil`) to be passed to the poller functions as the first argument when called.  
+  **NOTE:** the context object `ctx` is not passed to the default poller functions.
 
 **Example**
 

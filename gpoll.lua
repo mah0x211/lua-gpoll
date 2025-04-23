@@ -181,23 +181,29 @@ local Poller = DEFAULT_POLLER
 
 --- set_poller replace the internal polling functions
 --- @param poller? Poller
-local function set_poller(poller)
-    local newpoller
+--- @param ctx? any
+local function set_poller(poller, ctx)
     if poller == nil then
-        newpoller = DEFAULT_POLLER
-    else
-        newpoller = {}
-        for fname, default_func in pairs(DEFAULT_POLLER) do
-            local func = poller[fname]
-            if func == nil then
-                func = default_func
-            elseif type(func) ~= 'function' then
-                fatalf(2, '%q is not function: %q', fname, type(func))
-            end
-            newpoller[fname] = func
-        end
+        Poller = DEFAULT_POLLER
+        return
     end
 
+    local newpoller = {}
+    for fname, default_func in pairs(DEFAULT_POLLER) do
+        local func = poller[fname]
+        if func == nil then
+            newpoller[fname] = default_func
+        elseif type(func) ~= 'function' then
+            fatalf(2, '%q is not function: %q', fname, type(func))
+        elseif ctx == nil then
+            newpoller[fname] = func
+        else
+            -- wrap function to pass ctx as first argument
+            newpoller[fname] = function(...)
+                return func(ctx, ...)
+            end
+        end
+    end
     -- set new poller
     Poller = newpoller
 end
